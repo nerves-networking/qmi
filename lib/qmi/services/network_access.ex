@@ -1,9 +1,20 @@
-defmodule QMI.NetworkAccessService do
+defmodule QMI.Service.NetworkAccess do
+  use QMI.Service, id: 0x03
   require Logger
 
   @get_signal_strength 0x0020
 
-  def decode_response_tlvs(%{code: code} = resp) when code > 0 do
+  @spec get_signal_strength(GenServer.server(), QMI.control_point()) :: QMI.Driver.response()
+  def get_signal_strength(driver, cp) do
+    # TODO: Maybe ensure cp is for NetworkAccess serivce?
+    bin = <<@get_signal_strength::16-little, 5, 0, 16, 2, 0, 239, 0>>
+
+    QMI.Driver.request(driver, bin, cp)
+  end
+
+  @doc false
+  @impl QMI.Service
+  def decode_response_tlvs(%{code: code} = resp) when code not in [0, :success] do
     # Response almost never has more TLV's if the command
     # was not successful. Just assume skip all for now
     resp
@@ -14,7 +25,7 @@ defmodule QMI.NetworkAccessService do
     %{resp | tlvs: decoded_tlvs}
   end
 
-  defp decode_signal_strength(<<1, 2::little-16, sig_strength, radio_if, rem::binary>>, acc) do
+  defp decode_signal_strength(<<1, 2, 0, sig_strength::signed, radio_if, rem::binary>>, acc) do
     radio = decode_radio_if(radio_if)
     acc = [%{signal_strength: sig_strength, radio: radio} | acc]
 
@@ -27,7 +38,7 @@ defmodule QMI.NetworkAccessService do
          acc
        ) do
     sigs =
-      for <<sig, radio_if <- sig_list>>,
+      for <<sig::signed, radio_if <- sig_list>>,
         do: %{signal_strength: sig, radio: decode_radio_if(radio_if)}
 
     decode_signal_strength(rest, acc ++ sigs)
@@ -39,7 +50,7 @@ defmodule QMI.NetworkAccessService do
          acc
        ) do
     rssis =
-      for <<rssi, radio_if <- rssi_list>>, do: %{rssi: rssi, radio: decode_radio_if(radio_if)}
+      for <<rssi, radio_if <- rssi_list>>, do: %{rssi: -rssi, radio: decode_radio_if(radio_if)}
 
     decode_signal_strength(rest, acc ++ rssis)
   end
@@ -50,16 +61,17 @@ defmodule QMI.NetworkAccessService do
          acc
        ) do
     ecios =
-      for <<ecio, radio_if <- ecio_list>>, do: %{ecio: ecio, radio: decode_radio_if(radio_if)}
+      for <<ecio, radio_if <- ecio_list>>,
+        do: %{ecio: ecio * -0.5, radio: decode_radio_if(radio_if)}
 
     decode_signal_strength(rest, acc ++ ecios)
   end
 
-  defp decode_signal_strength(<<0x13, len::little-16, io::size(len), rest::binary>>, acc) do
+  defp decode_signal_strength(<<0x13, 4, 0, io::32-signed-little, rest::binary>>, acc) do
     decode_signal_strength(rest, [%{io: io} | acc])
   end
 
-  defp decode_signal_strength(<<0x14, len::little-16, sinr::size(len), rest::binary>>, acc) do
+  defp decode_signal_strength(<<0x14, 1, 0, sinr, rest::binary>>, acc) do
     sinr =
       case sinr do
         # SINR_LEVEL_0 is -9 dB
@@ -97,16 +109,15 @@ defmodule QMI.NetworkAccessService do
     decode_signal_strength(rest, acc ++ error_rates)
   end
 
-  defp decode_signal_strength(<<0x16, len::little-16, rsrq::binary-size(len), rest::binary>>, acc) do
-    <<rsrq, radio_if>> = rsrq
+  defp decode_signal_strength(<<0x16, 2, 0, rsrq::signed, radio_if, rest::binary>>, acc) do
     decode_signal_strength(rest, [%{rsrq: rsrq, radio: decode_radio_if(radio_if)} | acc])
   end
 
-  defp decode_signal_strength(<<0x17, len::little-16, snr::size(len), rest::binary>>, acc) do
-    decode_signal_strength(rest, [%{snr: snr} | acc])
+  defp decode_signal_strength(<<0x17, 2, 0, snr::16-little-signed, rest::binary>>, acc) do
+    decode_signal_strength(rest, [%{snr: snr * 0.1} | acc])
   end
 
-  defp decode_signal_strength(<<0x18, len::little-16, rsrp::size(len), rest::binary>>, acc) do
+  defp decode_signal_strength(<<0x18, 2, 0, rsrp::16-little-signed, rest::binary>>, acc) do
     decode_signal_strength(rest, [%{rsrp: rsrp} | acc])
   end
 
