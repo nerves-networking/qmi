@@ -23,14 +23,6 @@ defmodule QMI.Service do
       @id id
 
       def id(), do: @id
-
-      @doc """
-      Helper to get control point for this service
-
-      Control Points are required to making requests for a service
-      function. See QMI.Service.Control.get_control_point/2
-      """
-      defdelegate get_control_point(driver, service \\ @id), to: QMI.Service.Control
     end
   end
 end

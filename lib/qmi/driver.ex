@@ -72,6 +72,7 @@ defmodule QMI.Driver do
   end
 
   def handle_info({:dev_bridge, ref, :read, data}, %{ref: ref} = state) do
+    # TODO: Report indications somewhere?
     decoded = QMI.Message.decode(data)
     state = pop_and_reply(state, decoded)
 
