@@ -115,7 +115,7 @@ defmodule QMI.Message do
   defp maybe_decode_tlvs(message), do: message
 
   # If the message is a QMI_CTL message, transaction is only 1 byte
-  defp pop_type_and_transaction(QMI.ControlService, <<type, transaction, rest::binary>>) do
+  defp pop_type_and_transaction(QMI.Service.Control, <<type, transaction, rest::binary>>) do
     type =
       case type do
         0 -> :request

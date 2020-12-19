@@ -38,7 +38,7 @@ defmodule QMI.Service.Control do
           QMI.control_point() | QMI.Driver.response()
   def get_control_point(driver, service) do
     # TODO: Maybe change service to be atom that gets mapped?
-    bin = <<34, 0, 4, 0, 1, 1, 0, service>>
+    bin = <<@get_client_id::little-16, 4, 0, 1, 1, 0, service>>
 
     case QMI.Driver.request(driver, bin, @default_control_point) do
       {:ok, %{tlvs: [%{client_id: client_id, service: service}]}} ->
@@ -56,9 +56,9 @@ defmodule QMI.Service.Control do
   by the caller. It is crucial to release control points.
   """
   @spec release_control_point(GenServer.name(), QMI.control_point()) :: QMI.Driver.response()
-  def release_control_point(driver, {service, client} = cp) do
+  def release_control_point(driver, {service, client}) do
     bin = <<@release_client_id::16-little, 5, 0, 1, 2, 0, service, client>>
 
-    QMI.Driver.request(driver, bin, cp)
+    QMI.Driver.request(driver, bin, @default_control_point)
   end
 end

@@ -25,6 +25,8 @@ defmodule QMI.Service.NetworkAccess do
     %{resp | tlvs: decoded_tlvs}
   end
 
+  def decode_response_tlvs(resp), do: resp
+
   defp decode_signal_strength(<<1, 2, 0, sig_strength::signed, radio_if, rem::binary>>, acc) do
     radio = decode_radio_if(radio_if)
     acc = [%{signal_strength: sig_strength, radio: radio} | acc]
