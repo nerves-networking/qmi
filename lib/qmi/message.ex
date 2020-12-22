@@ -20,7 +20,7 @@ defmodule QMI.Message do
           type: type(),
           transaction: integer(),
           id: integer(),
-          tlvs: [map()] | binary()
+          tlvs: [map()] | binary() | map()
         }
 
   defstruct [
@@ -105,6 +105,14 @@ defmodule QMI.Message do
         tlvs: raw_tlvs
     }
 
+    if function_exported?(message.service, :decode_response_tlvs, 1) do
+      message.service.decode_response_tlvs(message)
+    else
+      message
+    end
+  end
+
+  defp maybe_decode_tlvs(%{type: :indication} = message) do
     if function_exported?(message.service, :decode_response_tlvs, 1) do
       message.service.decode_response_tlvs(message)
     else
