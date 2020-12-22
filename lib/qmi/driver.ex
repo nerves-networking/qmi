@@ -7,11 +7,21 @@ defmodule QMI.Driver do
 
   @type response :: {:ok, Message.t()} | {:error, Message.t() | :timeout}
 
+  defmodule State do
+    defstruct bridge: nil,
+              caller: nil,
+              dev: "/dev/cdc-wdm0",
+              ref: nil,
+              transactions: %{},
+              last_ctl_transaction: 0,
+              last_service_transaction: 0
+  end
+
   @request_flags 0
   @request_type 0
 
   def start_link(dev) do
-    GenServer.start_link(__MODULE__, dev, name: :"#{dev}-driver")
+    GenServer.start_link(__MODULE__, [dev: dev, caller: self()], name: :"#{dev}-driver")
   end
 
   @spec request(GenServer.server(), binary(), QMI.control_point(), non_neg_integer()) ::
@@ -31,25 +41,18 @@ defmodule QMI.Driver do
   end
 
   @impl GenServer
-  def init(dev) do
-    {:ok, bridge} = DevBridge.start_link(name: :"#{dev}-bridge")
+  def init(opts) do
+    state = struct(State, opts)
+    {:ok, bridge} = DevBridge.start_link(name: :"#{state.dev}-bridge")
 
-    {:ok,
-     %{
-       bridge: bridge,
-       dev: dev,
-       ref: nil,
-       transactions: %{},
-       last_ctl_transaction: 0,
-       last_service_transaction: 0
-     }, {:continue, :open}}
+    {:ok, %{state | bridge: bridge}, {:continue, :open}}
   end
 
   @impl GenServer
   def handle_call({:request, msg, client, timeout}, from, state) do
     {transaction, state} = do_request(msg, client, state)
-    Process.send_after(self(), {:timeout, transaction}, timeout)
-    {:noreply, %{state | transactions: Map.put(state.transactions, transaction, from)}}
+    timer = Process.send_after(self(), {:timeout, transaction}, timeout)
+    {:noreply, %{state | transactions: Map.put(state.transactions, transaction, {from, timer})}}
   end
 
   @impl GenServer
@@ -123,15 +126,27 @@ defmodule QMI.Driver do
     {tran, %{state | last_service_transaction: tran}}
   end
 
+  defp pop_and_reply(state, %Message{type: :indication} = msg) do
+    send(state.caller, {QMI, msg})
+    state
+  end
+
   defp pop_and_reply(state, %Message{transaction: transaction} = msg) do
     result = if msg.code == :success, do: :ok, else: :error
     pop_and_reply(state, transaction, {result, msg})
   end
 
   defp pop_and_reply(state, transaction, reply) do
-    {from, transactions} = Map.pop(state.transactions, transaction)
+    {meta, transactions} = Map.pop(state.transactions, transaction)
 
-    if from, do: GenServer.reply(from, reply)
+    case meta do
+      {from, timer} ->
+        _ = Process.cancel_timer(timer)
+        GenServer.reply(from, reply)
+
+      _ ->
+        :ignore
+    end
 
     %{state | transactions: transactions}
   end
