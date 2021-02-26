@@ -26,6 +26,7 @@ defmodule Qmi.MixProject do
 
   def application do
     [
+      mod: {QMI.Application, []},
       extra_applications: [:logger]
     ]
   end

@@ -4,12 +4,12 @@ defmodule QMI.Service.NetworkAccess do
 
   @get_signal_strength 0x0020
 
-  @spec get_signal_strength(GenServer.server(), QMI.control_point()) :: QMI.Driver.response()
-  def get_signal_strength(driver, cp) do
+  @spec get_signal_strength(QMI.device(), QMI.control_point()) :: QMI.Driver.response()
+  def get_signal_strength(device, cp) do
     # TODO: Maybe ensure cp is for NetworkAccess serivce?
     bin = <<@get_signal_strength::16-little, 5, 0, 16, 2, 0, 239, 0>>
 
-    QMI.Driver.request(driver, bin, cp)
+    QMI.Driver.request(device, bin, cp)
   end
 
   @doc false

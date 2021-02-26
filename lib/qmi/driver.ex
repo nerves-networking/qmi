@@ -20,24 +20,31 @@ defmodule QMI.Driver do
   @request_flags 0
   @request_type 0
 
+  @spec start_link(QMI.device()) :: GenServer.on_start()
   def start_link(dev) do
-    GenServer.start_link(__MODULE__, [dev: dev, caller: self()], name: :"#{dev}-driver")
+    GenServer.start_link(__MODULE__, [dev: dev, caller: self()], name: via_name(dev))
   end
 
-  @spec request(GenServer.server(), binary(), QMI.control_point(), non_neg_integer()) ::
+  defp via_name(driver_pid) when is_pid(driver_pid), do: driver_pid
+
+  defp via_name(device) do
+    {:via, Registry, {QMI.Driver.Registry, device}}
+  end
+
+  @spec request(QMI.device() | pid(), binary(), QMI.control_point(), non_neg_integer()) ::
           response()
-  def request(driver, msg, client, timeout \\ 5_000) do
+  def request(device, msg, client, timeout \\ 5_000) do
     ##
     # Responses will come async so we handle the timeout to the request
     # manually with timers after submitting the request. To ensure
     # GenServer gives us enough time, we'll significantly bump it here
     gen_timeout = timeout * 2
-    GenServer.call(driver, {:request, msg, client, timeout}, gen_timeout)
+    GenServer.call(via_name(device), {:request, msg, client, timeout}, gen_timeout)
   end
 
-  @spec request_async(GenServer.server(), binary(), QMI.control_point()) :: :ok
-  def request_async(driver, msg, client) do
-    GenServer.cast(driver, {:request, msg, client})
+  @spec request_async(QMI.device() | pid(), binary(), QMI.control_point()) :: :ok
+  def request_async(device, msg, client) do
+    GenServer.cast(via_name(device), {:request, msg, client})
   end
 
   @impl GenServer
@@ -63,6 +70,9 @@ defmodule QMI.Driver do
 
   @impl GenServer
   def handle_continue(:open, state) do
+    require Logger
+
+    Logger.warn("#{inspect(state)}")
     {:ok, ref} = DevBridge.open(state.bridge, state.dev, [:read, :write])
 
     {:noreply, %{state | ref: ref}}
