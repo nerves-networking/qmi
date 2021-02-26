@@ -3,6 +3,11 @@ defmodule QMI do
   @type service :: non_neg_integer()
   @type control_point :: {service(), client_id()}
 
+  @typedoc """
+  Name of the device
+  """
+  @type device :: String.t()
+
   alias QMI.Service.DeviceManagement
 
   defdelegate get_control_point(driver, service), to: QMI.Service.Control
@@ -11,22 +16,21 @@ defmodule QMI do
   @doc """
   Get the operating state of the modem
   """
-  def get_operating_state() do
-    driver = start_driver()
-    cp = get_control_point(driver, DeviceManagement.id())
+  def get_operating_state(device) do
+    cp = get_control_point(device, DeviceManagement.id())
 
-    response = DeviceManagement.get_operating_state_mode(drive, cp)
+    response = DeviceManagement.get_operating_state_mode(device, cp)
 
-    release_control_point(driver, cp)
+    release_control_point(device, cp)
 
     response
   end
 
-  defp start_driver() do
+  def start_driver(device \\ "/dev/cdc-wdm0") do
     # Will change in the future to not be so drastic, just
     # was wanting to make working with this at the command line
     # a little nicer for testing.
-    case QMI.Driver.start_link("/dev/cdc-wdm0") do
+    case QMI.Driver.Supervisor.start_driver(device) do
       {:ok, driver} ->
         driver
 

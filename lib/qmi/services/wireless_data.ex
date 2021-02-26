@@ -7,21 +7,21 @@ defmodule QMI.Service.WirelessData do
   @pkt_srvc_status 0x0022
   @get_runtime_settings 0x002D
 
-  def get_pkt_srvc_status(driver, cp) do
-    case QMI.Driver.request(driver, <<@pkt_srvc_status::little-16, 0, 0>>, cp) do
+  def get_pkt_srvc_status(device, cp) do
+    case QMI.Driver.request(device, <<@pkt_srvc_status::little-16, 0, 0>>, cp) do
       {:ok, msg} -> msg.tlvs.connection_status
       err -> err
     end
   end
 
-  def get_runtime_settings(driver, cp) do
-    case QMI.Driver.request(driver, <<@get_runtime_settings::little-16, 0, 0>>, cp) do
+  def get_runtime_settings(device, cp) do
+    case QMI.Driver.request(device, <<@get_runtime_settings::little-16, 0, 0>>, cp) do
       {:ok, msg} -> msg.tlvs
       err -> err
     end
   end
 
-  def start_network_interface(driver, cp, opts) do
+  def start_network_interface(device, cp, opts) do
     opts = for {k, v} <- opts, do: {k, format_opt(k, v)}
     # apn_type = opts[:apn_type] || 0
 
@@ -35,7 +35,7 @@ defmodule QMI.Service.WirelessData do
     tlvs_size = byte_size(tlvs)
     bin = <<@start_network_interface::16-little, tlvs_size::16-little>> <> tlvs
 
-    QMI.Driver.request(driver, bin, cp)
+    QMI.Driver.request(device, bin, cp)
   end
 
   @impl QMI.Service

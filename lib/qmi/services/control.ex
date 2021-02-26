@@ -34,13 +34,13 @@ defmodule QMI.Service.Control do
 
   #{File.read!("README.md") |> String.split(~r/<!-- CPDOC !-->/) |> Enum.drop(1) |> hd()}
   """
-  @spec get_control_point(GenServer.server(), QMI.service()) ::
+  @spec get_control_point(QMI.device(), QMI.service()) ::
           QMI.control_point() | QMI.Driver.response()
-  def get_control_point(driver, service) do
+  def get_control_point(device, service) do
     # TODO: Maybe change service to be atom that gets mapped?
     bin = <<@get_client_id::little-16, 4, 0, 1, 1, 0, service>>
 
-    case QMI.Driver.request(driver, bin, @default_control_point) do
+    case QMI.Driver.request(device, bin, @default_control_point) do
       {:ok, %{tlvs: [%{client_id: client_id, service: service}]}} ->
         {service, client_id}
 
@@ -55,10 +55,10 @@ defmodule QMI.Service.Control do
   When a client is allocated for a control point, it must manually be released
   by the caller. It is crucial to release control points.
   """
-  @spec release_control_point(GenServer.name(), QMI.control_point()) :: QMI.Driver.response()
-  def release_control_point(driver, {service, client}) do
+  @spec release_control_point(QMI.device(), QMI.control_point()) :: QMI.Driver.response()
+  def release_control_point(device, {service, client}) do
     bin = <<@release_client_id::16-little, 5, 0, 1, 2, 0, service, client>>
 
-    QMI.Driver.request(driver, bin, @default_control_point)
+    QMI.Driver.request(device, bin, @default_control_point)
   end
 end
