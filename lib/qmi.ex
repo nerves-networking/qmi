@@ -1,41 +1,57 @@
 defmodule QMI do
-  @type client_id :: non_neg_integer()
   @type service :: non_neg_integer()
-  @type control_point :: {service(), client_id()}
 
   @typedoc """
   Name of the device
   """
   @type device :: String.t()
 
-  alias QMI.Service.DeviceManagement
+  alias QMI.ControlPoint
+  alias QMI.Service.{Control, DeviceManagement}
 
-  defdelegate get_control_point(driver, service), to: QMI.Service.Control
-  defdelegate release_control_point(driver, cp), to: QMI.Service.Control
+  @doc """
+  Get a control point for a service to send commands to the modem
+
+  When a client is allocated for a control point, it must manually be released
+  by the caller. It is crucial to release control points because allocation may
+  fail silently in QMI when a limit as been reached.
+
+  Most tasks will need to immediately release the control point after the request,
+  though some may need to keep the client allocated for the duration and used
+  in subsequent requests, such as the wireless connection command.
+  """
+  @spec get_control_point(device(), module()) :: {:ok, ControlPoint.t()} | {:error, any()}
+  def get_control_point(device, service) do
+    with {:ok, _driver} <- QMI.Driver.Supervisor.start_driver(device),
+         {:ok, client_id} <- Control.get_client_id(device, service.id) do
+      {:ok, %ControlPoint{client_id: client_id, device: device, service: service}}
+    else
+      error -> error
+    end
+  end
+
+  @doc """
+  Release a control point
+  """
+  @spec release_control_point(ControlPoint.t()) :: any()
+  def release_control_point(%ControlPoint{} = cp) do
+    service_id = cp.service.id()
+    Control.release_client_id(cp.device, {service_id, cp.client_id})
+  end
 
   @doc """
   Get the operating state of the modem
   """
-  def get_operating_state(device) do
-    cp = get_control_point(device, DeviceManagement.id())
+  @spec get_operating_state(ControlPoint.t()) :: {:ok, atom()} | {:error, any()}
+  def get_operating_state(%ControlPoint{} = cp) do
+    service_id = cp.service.id()
 
-    response = DeviceManagement.get_operating_state_mode(device, cp)
+    case DeviceManagement.get_operating_state_mode(cp.device, {service_id, cp.client_id}) do
+      {:ok, message} ->
+        {:ok, Keyword.fetch!(message.tlvs, :mode)}
 
-    release_control_point(device, cp)
-
-    response
-  end
-
-  def start_driver(device \\ "/dev/cdc-wdm0") do
-    # Will change in the future to not be so drastic, just
-    # was wanting to make working with this at the command line
-    # a little nicer for testing.
-    case QMI.Driver.Supervisor.start_driver(device) do
-      {:ok, driver} ->
-        driver
-
-      {:error, {:already_started, driver}} ->
-        driver
+      error ->
+        error
     end
   end
 end
