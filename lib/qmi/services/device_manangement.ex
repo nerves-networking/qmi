@@ -9,14 +9,14 @@ defmodule QMI.Service.DeviceManagement do
   The operating state mode should be `:online` before trying to make a wireless
   data network connection.
   """
-  def get_operating_state_mode(device, control_point) do
+  def get_operating_state_mode(device, service_client_id) do
     # Had to pad 3 bytes
     # output from `strace -x -o /data/qmicli-trace qmicli -d /dev/cdc-wdm0 --dms-get-operating-mode`
     # write(5, "\x01\x0c\x00\x00\x02\x01\x00\x01\x00\x2d\x00\x00\x00", 13) = 13
     # `\x2d` is the start of our request, and it shows that
     bin = <<@get_operating_state_mode::16-little, 0x00, 0x00, 0x00>>
 
-    QMI.Driver.request(device, bin, control_point)
+    QMI.Driver.request(device, bin, service_client_id)
   end
 
   @impl QMI.Service
