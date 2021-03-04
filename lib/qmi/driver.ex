@@ -70,9 +70,6 @@ defmodule QMI.Driver do
 
   @impl GenServer
   def handle_continue(:open, state) do
-    require Logger
-
-    Logger.warn("#{inspect(state)}")
     {:ok, ref} = DevBridge.open(state.bridge, state.dev, [:read, :write])
 
     {:noreply, %{state | ref: ref}}

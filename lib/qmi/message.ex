@@ -98,18 +98,12 @@ defmodule QMI.Message do
     # Pop the code and error from result TLV before attempting to decode tlvs
     <<2, 4::16-little, code::16-little, error::16-little, raw_tlvs::binary>> = message.tlvs
 
-    message = %{
+    %{
       message
       | code: Codes.decode_result_code(code),
         error: Codes.decode_error_code(error),
         tlvs: raw_tlvs
     }
-
-    if function_exported?(message.service, :decode_response_tlvs, 1) do
-      message.service.decode_response_tlvs(message)
-    else
-      message
-    end
   end
 
   defp maybe_decode_tlvs(%{type: :indication} = message) do
