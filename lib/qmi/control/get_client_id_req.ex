@@ -1,4 +1,8 @@
 defmodule QMI.Control.GetClientIdReq do
+  @moduledoc """
+  Request a client id from the specified QMI service
+  """
+
   @type t() :: %__MODULE__{
           service_type: non_neg_integer()
         }
@@ -6,10 +10,8 @@ defmodule QMI.Control.GetClientIdReq do
   defstruct service_type: nil
 
   defimpl QMI.Request do
-    @get_client_id 0x0022
-
     def encode(%{service_type: service_type}) do
-      <<@get_client_id::little-16, 4, 0, 1, 1, 0, service_type>>
+      <<0x0022::little-16, 4, 0, 1, 1, 0, service_type>>
     end
   end
 end

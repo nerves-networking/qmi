@@ -1,4 +1,3 @@
-defmodule QmiTest do
+defmodule QMITest do
   use ExUnit.Case
-  doctest Qmi
 end

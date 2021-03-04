@@ -1,4 +1,13 @@
 defmodule QMI.Control.ReleaseClientIdResp do
+  @moduledoc """
+  Response to releasing a client id
+  """
+
+  @type t() :: %__MODULE__{
+          service_type: non_neg_integer(),
+          client_id: non_neg_integer()
+        }
+
   defstruct service_type: nil, client_id: nil
 
   defimpl QMI.Response do
