@@ -6,7 +6,16 @@ defmodule QMI do
   """
   @type device :: String.t()
 
-  alias QMI.{Control, ControlPoint, DeviceManagement, Driver, Message, Request, Response}
+  alias QMI.{
+    Control,
+    ControlPoint,
+    DeviceManagement,
+    Driver,
+    Message,
+    Request,
+    Response,
+    WirelessData
+  }
 
   @doc """
   Get a control point for a service to send commands to the modem
@@ -54,6 +63,26 @@ defmodule QMI do
     case send_request(cp, request) do
       {:ok, message} ->
         {:ok, Response.parse_tlvs(%DeviceManagement.GetOperatingModeResp{}, message.tlvs)}
+    end
+  end
+
+  @doc """
+  Start a network connection to a service provider
+
+  If this command completes successfully you can perform IP configuration for
+  the interface.
+  """
+  @spec start_network_connection(ControlPoint.t(), String.t()) ::
+          {:ok, WirelessData.StartNetworkInterfaceResp.t()} | {:error, any()}
+  def start_network_connection(control_point, service_provider) do
+    request = %WirelessData.StartNetworkInterfaceReq{apn_name: service_provider}
+
+    case send_request(control_point, request) do
+      {:ok, message} ->
+        {:ok, Response.parse_tlvs(%WirelessData.StartNetworkInterfaceResp{}, message.tlvs)}
+
+      error ->
+        error
     end
   end
 
