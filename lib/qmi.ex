@@ -54,4 +54,27 @@ defmodule QMI do
         error
     end
   end
+
+  def send_binary(cp, binary) do
+    %ControlPoint{client_id: cid, device: device, service: service} = cp
+    service_id = service.id()
+
+    QMI.Driver.request(device, binary, {service_id, cid})
+  end
+
+  def tlvs_parse(tlvs_bin) do
+    tlvs_parse(tlvs_bin, %{})
+  end
+
+  defp tlvs_parse(<<>>, acc) do
+    acc
+  end
+
+  defp tlvs_parse(
+         <<type, length::little-16, values::size(length)-unit(8)-binary, more_tlvs::binary>>,
+         acc
+       ) do
+    acc = Map.put(acc, type, %{length: length, values: values})
+    tlvs_parse(more_tlvs, acc)
+  end
 end

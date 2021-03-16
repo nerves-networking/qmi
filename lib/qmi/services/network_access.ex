@@ -12,6 +12,26 @@ defmodule QMI.Service.NetworkAccess do
     QMI.Driver.request(device, bin, cp)
   end
 
+  def get_home_network() do
+    {<<0x25, 0x00, 0x00, 0x00>>, &get_mcc_mnc/1}
+  end
+
+  def get_serving_station() do
+    <<0x24, 0x00, 0x00, 0x00>>
+  end
+
+  def get_mcc_mnc(message) do
+    tlvs = QMI.tlvs_parse(message.tlvs)
+
+    case Map.get(tlvs, 0x01) do
+      %{values: <<mcc::little-16, mnc::little-16, _rest::binary>>} ->
+        %{mcc: mcc, mnc: mnc}
+
+      _ ->
+        %{mcc: nil, mnc: nil}
+    end
+  end
+
   @doc false
   @impl QMI.Service
   def decode_response_tlvs(%{code: code} = resp) when code not in [0, :success] do
