@@ -29,6 +29,10 @@ defmodule QMI.Service.Control do
     %{resp | tlvs: [%{service: service, client_id: client_id}]}
   end
 
+  def decode_response_tlvs(message) do
+    message
+  end
+
   ##
   # Requests
   @doc """

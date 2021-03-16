@@ -35,7 +35,7 @@ defmodule QMI.Service.WirelessData do
     tlvs_size = byte_size(tlvs)
     bin = <<@start_network_interface::16-little, tlvs_size::16-little>> <> tlvs
 
-    QMI.Driver.request(device, bin, cp)
+    QMI.Driver.request(device, bin, cp, 15_000)
   end
 
   @impl QMI.Service
