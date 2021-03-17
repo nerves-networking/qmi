@@ -134,7 +134,7 @@ defmodule QMI.Driver do
   end
 
   defp pop_and_reply(state, %Message{type: :indication} = msg) do
-    send(state.caller, {QMI, msg})
+    Logger.debug("QMI Indication: #{inspect(msg)}")
     state
   end
 
