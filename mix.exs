@@ -51,7 +51,7 @@ defmodule Qmi.MixProject do
 
   def package do
     [
-      licenses: ["Apache-2.0"],
+      licenses: ["Proprietary"],
       links: %{"GitHub" => @source_url},
       files: [
         "lib",
@@ -60,7 +60,8 @@ defmodule Qmi.MixProject do
         "LICENSE",
         "mix.exs",
         "README.md"
-      ]
+      ],
+      organization: "smartrent"
     ]
   end
 end
