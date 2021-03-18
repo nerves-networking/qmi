@@ -59,7 +59,8 @@ defmodule Qmi.MixProject do
         "CHANGELOG.md",
         "LICENSE",
         "mix.exs",
-        "README.md"
+        "README.md",
+        "Makefile"
       ],
       organization: "smartrent"
     ]
