@@ -3,7 +3,7 @@ defmodule QMI.Driver do
 
   require Logger
 
-  alias QMI.Message
+  alias QMI.{ControlPoint, Message}
 
   @type response :: {:ok, Message.t()} | {:error, Message.t() | :timeout}
 
@@ -31,7 +31,12 @@ defmodule QMI.Driver do
     {:via, Registry, {QMI.Driver.Registry, device}}
   end
 
-  @spec request(QMI.device() | pid(), binary(), QMI.control_point(), non_neg_integer()) ::
+  @spec request(
+          QMI.device() | pid(),
+          binary(),
+          {non_neg_integer(), ControlPoint.client_id()},
+          non_neg_integer()
+        ) ::
           response()
   def request(device, msg, client, timeout \\ 5_000) do
     ##
@@ -42,7 +47,11 @@ defmodule QMI.Driver do
     GenServer.call(via_name(device), {:request, msg, client, timeout}, gen_timeout)
   end
 
-  @spec request_async(QMI.device() | pid(), binary(), QMI.control_point()) :: :ok
+  @spec request_async(
+          QMI.device() | pid(),
+          binary(),
+          {non_neg_integer(), ControlPoint.client_id()}
+        ) :: :ok
   def request_async(device, msg, client) do
     GenServer.cast(via_name(device), {:request, msg, client})
   end
