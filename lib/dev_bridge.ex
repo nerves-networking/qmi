@@ -86,7 +86,7 @@ defmodule DevBridge do
 
   TBD
   """
-  @spec position(GenServer.server(), :file.location()) :: :ok
+  @spec position(GenServer.server(), file_location :: term()) :: :ok
   def position(server, location) do
     GenServer.call(server, {:position, location})
   end
