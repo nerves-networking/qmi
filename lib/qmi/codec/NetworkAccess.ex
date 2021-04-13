@@ -30,6 +30,10 @@ defmodule QMI.Codec.NetworkAccess do
     parse_get_signal_strength_tlvs(%{}, tlvs)
   end
 
+  defp parse_get_signal_strength_tlvs(parsed, <<>>) do
+    parsed
+  end
+
   defp parse_get_signal_strength_tlvs(
          parsed,
          <<0x11, _length::little-16, num_sets::little-16,

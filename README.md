@@ -1,4 +1,4 @@
-# Qmi
+# QMI
 
 Qualcomm MSM Interface in Elixir
 
@@ -59,7 +59,7 @@ The resulting message looks like:
 msg_id = 0x22
 msg_len = 4
 type = 1
-len = 1 
+len = 1
 val = 3 # Network Access Service
 
 bin = <<msg_id::little-16, msg_len::little-16, type, len::little-16, val>>

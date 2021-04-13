@@ -20,7 +20,8 @@ defmodule QMI.Message do
           type: type(),
           transaction: integer(),
           id: integer(),
-          tlvs: [map()] | binary() | map()
+          tlvs: [map()] | binary() | map(),
+          service_msg_bin: binary()
         }
 
   defstruct [
@@ -34,7 +35,8 @@ defmodule QMI.Message do
     :transaction,
     :id,
     :tlvs,
-    :raw
+    :raw,
+    :service_msg_bin
   ]
 
   def decode(<<1, len::16-little, flags, service, client, bin::binary>> = raw) do
@@ -58,7 +60,8 @@ defmodule QMI.Message do
       transaction: transaction,
       id: msg_id,
       tlvs: raw_tlvs,
-      raw: raw
+      raw: raw,
+      service_msg_bin: service_msg_bin
     }
     |> maybe_decode_tlvs()
   end

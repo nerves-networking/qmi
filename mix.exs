@@ -1,4 +1,4 @@
-defmodule Qmi.MixProject do
+defmodule QMI.MixProject do
   use Mix.Project
 
   @version "0.1.0"
