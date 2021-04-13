@@ -1,6 +1,8 @@
 defmodule QMI do
   @type service :: non_neg_integer()
 
+  @type request() :: %{payload: iodata(), decode: (binary() -> map())}
+
   @typedoc """
   Name of the device
   """
