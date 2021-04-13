@@ -31,6 +31,14 @@ defmodule QMI.Driver do
     {:via, Registry, {QMI.Driver.Registry, device}}
   end
 
+  def send(device, iodata, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 5_000)
+    client_id = Keyword.get(opts, :client_id, 0)
+    service_id = Keyword.get(opts, :service_id, 0)
+
+    GenServer.call(via_name(device), {:send, iodata, service_id, client_id, timeout}, timeout * 2)
+  end
+
   @spec request(
           QMI.device() | pid(),
           binary(),
@@ -62,6 +70,13 @@ defmodule QMI.Driver do
     {:ok, bridge} = DevBridge.start_link(name: :"#{state.dev}-bridge")
 
     {:ok, %{state | bridge: bridge}, {:continue, :open}}
+  end
+
+  @impl GenServer
+  def handle_call({:send, iodata, service_id, client_id, timeout}, from, state) do
+    {transaction, state} = do_request(iodata, {service_id, client_id}, state)
+    timer = Process.send_after(self(), {:timeout, transaction}, timeout)
+    {:noreply, %{state | transactions: Map.put(state.transactions, transaction, {from, timer})}}
   end
 
   @impl GenServer
@@ -109,18 +124,47 @@ defmodule QMI.Driver do
     # Transaction needs to be sized based on control vs service message
     tran_size = if service == 0, do: 8, else: 16
 
-    service_msg =
-      <<@request_flags, service, client_id, @request_type, transaction::size(tran_size)-little>> <>
-        msg
+    service_msg = make_service_msg(msg, service, client_id, transaction, tran_size)
 
     # Length needs to include the 2 length bytes as well
-    len = byte_size(service_msg) + 2
+    len = get_msg_length(service_msg) + 2
 
-    qmux_msg = <<1, len::16-little>> <> service_msg
+    qmux_msg =
+      case service_msg do
+        data when is_binary(data) ->
+          <<1, len::16-little>> <> service_msg
+
+        data when is_list(data) ->
+          [<<1, len::16-little>>, service_msg]
+      end
 
     {:ok, _len} = DevBridge.write(state.bridge, qmux_msg)
 
     {transaction, state}
+  end
+
+  defp make_service_msg(data, service, client_id, transaction, tran_size) when is_binary(data) do
+    <<@request_flags, service, client_id, @request_type, transaction::size(tran_size)-little>> <>
+      data
+  end
+
+  defp make_service_msg(data, service, client_id, transaction, tran_size) when is_list(data) do
+    [
+      @request_flags,
+      service,
+      client_id,
+      @request_type,
+      <<transaction::size(tran_size)-little>>,
+      data
+    ]
+  end
+
+  defp get_msg_length(data) when is_binary(data) do
+    byte_size(data)
+  end
+
+  defp get_msg_length(data) when is_list(data) do
+    IO.iodata_length(data)
   end
 
   defp next_transaction(0, %{last_ctl_transaction: tran} = state) do
@@ -148,8 +192,14 @@ defmodule QMI.Driver do
   end
 
   defp pop_and_reply(state, %Message{transaction: transaction} = msg) do
+    require Logger
     result = if msg.code == :success, do: :ok, else: :error
-    pop_and_reply(state, transaction, {result, msg})
+
+    if result == :error do
+      Logger.warn("#{inspect(msg)}")
+    end
+
+    pop_and_reply(state, transaction, {result, msg.service_msg_bin})
   end
 
   defp pop_and_reply(state, transaction, reply) do

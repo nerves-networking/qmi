@@ -1,15 +1,18 @@
 defmodule QMI do
-  @type service :: non_neg_integer()
+  @moduledoc """
+
+  """
+
+  @type service() :: :control | :network_access | :wireless_data
 
   @type request() :: %{payload: iodata(), decode: (binary() -> map())}
 
   @typedoc """
   Name of the device
   """
-  @type device :: String.t()
+  @type device() :: String.t()
 
-  alias QMI.ControlPoint
-  alias QMI.Service.{Control, DeviceManagement}
+  @type control_point() :: %{device: binary(), client_id: byte(), service_id: non_neg_integer()}
 
   @doc """
   Get a control point for a service to send commands to the modem
@@ -22,11 +25,13 @@ defmodule QMI do
   though some may need to keep the client allocated for the duration and used
   in subsequent requests, such as the wireless connection command.
   """
-  @spec get_control_point(device(), module()) :: {:ok, ControlPoint.t()} | {:error, any()}
+  @spec get_control_point(device(), service()) :: {:ok, control_point()} | {:error, any()}
   def get_control_point(device, service) do
+    service_id = service_id(service)
+
     with {:ok, _driver} <- QMI.Driver.Supervisor.start_driver(device),
-         {:ok, client_id} <- Control.get_client_id(device, service.id) do
-      {:ok, %ControlPoint{client_id: client_id, device: device, service: service}}
+         {:ok, resp} <- QMI.Control.get_client_id(%{device: device}, service_id) do
+      {:ok, %{client_id: resp.client_id, device: device, service_id: resp.service_id}}
     else
       error -> error
     end
@@ -35,48 +40,12 @@ defmodule QMI do
   @doc """
   Release a control point
   """
-  @spec release_control_point(ControlPoint.t()) :: any()
-  def release_control_point(%ControlPoint{} = cp) do
-    service_id = cp.service.id()
-    Control.release_client_id(cp.device, {service_id, cp.client_id})
+  @spec release_control_point(control_point()) :: any()
+  def release_control_point(control_point) do
+    QMI.Control.release_client_id(control_point)
   end
 
-  @doc """
-  Get the operating state of the modem
-  """
-  @spec get_operating_state(ControlPoint.t()) :: {:ok, atom()} | {:error, any()}
-  def get_operating_state(%ControlPoint{} = cp) do
-    service_id = cp.service.id()
-
-    case DeviceManagement.get_operating_state_mode(cp.device, {service_id, cp.client_id}) do
-      {:ok, message} ->
-        {:ok, Keyword.fetch!(message.tlvs, :mode)}
-
-      error ->
-        error
-    end
-  end
-
-  def send_binary(cp, binary) do
-    %ControlPoint{client_id: cid, device: device, service: service} = cp
-    service_id = service.id()
-
-    QMI.Driver.request(device, binary, {service_id, cid})
-  end
-
-  def tlvs_parse(tlvs_bin) do
-    tlvs_parse(tlvs_bin, %{})
-  end
-
-  defp tlvs_parse(<<>>, acc) do
-    acc
-  end
-
-  defp tlvs_parse(
-         <<type, length::little-16, values::size(length)-unit(8)-binary, more_tlvs::binary>>,
-         acc
-       ) do
-    acc = Map.put(acc, type, %{length: length, values: values})
-    tlvs_parse(more_tlvs, acc)
-  end
+  defp service_id(:control), do: 0x00
+  defp service_id(:wireless_data), do: 0x01
+  defp service_id(:network_access), do: 0x03
 end
