@@ -3,100 +3,63 @@ defmodule QMI.Driver do
 
   require Logger
 
-  alias QMI.{ControlPoint, Message}
+  alias QMI.Message
 
   @type response :: {:ok, Message.t()} | {:error, Message.t() | :timeout}
 
   defmodule State do
     defstruct bridge: nil,
               caller: nil,
-              dev: "/dev/cdc-wdm0",
+              device_path: nil,
               ref: nil,
               transactions: %{},
               last_ctl_transaction: 0,
-              last_service_transaction: 0
+              last_service_transaction: 256
   end
 
   @request_flags 0
   @request_type 0
 
-  @spec start_link(QMI.device()) :: GenServer.on_start()
-  def start_link(dev) do
-    GenServer.start_link(__MODULE__, [dev: dev, caller: self()], name: via_name(dev))
+  @type options() :: [device_path: Path.t(), caller: pid()]
+
+  @spec start_link(options) :: GenServer.on_start()
+  def start_link(options) do
+    new_options = Keyword.put_new(options, :caller, self())
+    GenServer.start_link(__MODULE__, new_options)
   end
 
-  defp via_name(driver_pid) when is_pid(driver_pid), do: driver_pid
-
-  defp via_name(device) do
-    {:via, Registry, {QMI.Driver.Registry, device}}
-  end
-
-  def send(device, iodata, opts \\ []) do
+  @doc """
+  Send a message and return the response
+  """
+  @spec send(GenServer.server(), QMI.request(), keyword()) :: {:ok, binary()} | {:error, atom()}
+  def send(server, request, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, 5_000)
-    client_id = Keyword.get(opts, :client_id, 0)
-    service_id = Keyword.get(opts, :service_id, 0)
 
-    GenServer.call(via_name(device), {:send, iodata, service_id, client_id, timeout}, timeout * 2)
-  end
-
-  @spec request(
-          QMI.device() | pid(),
-          binary(),
-          {non_neg_integer(), ControlPoint.client_id()},
-          non_neg_integer()
-        ) ::
-          response()
-  def request(device, msg, client, timeout \\ 5_000) do
-    ##
-    # Responses will come async so we handle the timeout to the request
-    # manually with timers after submitting the request. To ensure
-    # GenServer gives us enough time, we'll significantly bump it here
-    gen_timeout = timeout * 2
-    GenServer.call(via_name(device), {:request, msg, client, timeout}, gen_timeout)
-  end
-
-  @spec request_async(
-          QMI.device() | pid(),
-          binary(),
-          {non_neg_integer(), ControlPoint.client_id()}
-        ) :: :ok
-  def request_async(device, msg, client) do
-    GenServer.cast(via_name(device), {:request, msg, client})
+    GenServer.call(server, {:send, request, timeout}, timeout * 2)
   end
 
   @impl GenServer
   def init(opts) do
     state = struct(State, opts)
-    {:ok, bridge} = DevBridge.start_link(name: :"#{state.dev}-bridge")
+    {:ok, bridge} = DevBridge.start_link([])
 
     {:ok, %{state | bridge: bridge}, {:continue, :open}}
   end
 
   @impl GenServer
-  def handle_call({:send, iodata, service_id, client_id, timeout}, from, state) do
-    {transaction, state} = do_request(iodata, {service_id, client_id}, state)
-    timer = Process.send_after(self(), {:timeout, transaction}, timeout)
-    {:noreply, %{state | transactions: Map.put(state.transactions, transaction, {from, timer})}}
-  end
-
-  @impl GenServer
-  def handle_call({:request, msg, client, timeout}, from, state) do
-    {transaction, state} = do_request(msg, client, state)
-    timer = Process.send_after(self(), {:timeout, transaction}, timeout)
-    {:noreply, %{state | transactions: Map.put(state.transactions, transaction, {from, timer})}}
-  end
-
-  @impl GenServer
-  def handle_cast({:request, msg, client}, state) do
-    {_transaction, state} = do_request(msg, client, state)
-    {:noreply, state}
-  end
-
-  @impl GenServer
   def handle_continue(:open, state) do
-    {:ok, ref} = DevBridge.open(state.bridge, state.dev, [:read, :write])
+    {:ok, ref} = DevBridge.open(state.bridge, state.device_path, [:read, :write])
 
     {:noreply, %{state | ref: ref}}
+  end
+
+  @impl GenServer
+  def handle_call({:send, request, timeout}, from, state) do
+    # FIXME get_client_id(request.service_id)
+    client_id = 5
+    {transaction, state} = do_request(request, client_id, state)
+    timer = Process.send_after(self(), {:timeout, transaction}, timeout)
+    {:noreply, %{state | transactions: Map.put(state.transactions, transaction, {from, timer})}}
   end
 
   @impl GenServer
@@ -118,53 +81,30 @@ defmodule QMI.Driver do
     {:noreply, state, {:continue, :open}}
   end
 
-  defp do_request(msg, {service, client_id}, state) do
-    {transaction, state} = next_transaction(service, state)
+  defp do_request(request, client_id, state) do
+    {transaction, state} = next_transaction(request.service_id, state)
 
     # Transaction needs to be sized based on control vs service message
-    tran_size = if service == 0, do: 8, else: 16
+    tran_size = if request.service_id == 0, do: 8, else: 16
 
-    service_msg = make_service_msg(msg, service, client_id, transaction, tran_size)
+    service_msg =
+      make_service_msg(request.payload, request.service_id, client_id, transaction, tran_size)
 
     # Length needs to include the 2 length bytes as well
-    len = get_msg_length(service_msg) + 2
+    len = IO.iodata_length(service_msg) + 2
 
-    qmux_msg =
-      case service_msg do
-        data when is_binary(data) ->
-          <<1, len::16-little>> <> service_msg
-
-        data when is_list(data) ->
-          [<<1, len::16-little>>, service_msg]
-      end
+    qmux_msg = [<<1, len::16-little>>, service_msg]
 
     {:ok, _len} = DevBridge.write(state.bridge, qmux_msg)
 
     {transaction, state}
   end
 
-  defp make_service_msg(data, service, client_id, transaction, tran_size) when is_binary(data) do
-    <<@request_flags, service, client_id, @request_type, transaction::size(tran_size)-little>> <>
-      data
-  end
-
-  defp make_service_msg(data, service, client_id, transaction, tran_size) when is_list(data) do
+  defp make_service_msg(data, service, client_id, transaction, tran_size) do
     [
-      @request_flags,
-      service,
-      client_id,
-      @request_type,
-      <<transaction::size(tran_size)-little>>,
+      <<@request_flags, service, client_id, @request_type, transaction::size(tran_size)-little>>,
       data
     ]
-  end
-
-  defp get_msg_length(data) when is_binary(data) do
-    byte_size(data)
-  end
-
-  defp get_msg_length(data) when is_list(data) do
-    IO.iodata_length(data)
   end
 
   defp next_transaction(0, %{last_ctl_transaction: tran} = state) do
@@ -177,11 +117,9 @@ defmodule QMI.Driver do
   end
 
   defp next_transaction(_service, %{last_service_transaction: tran} = state) do
-    # max num for 2 bytes is 65535
-    tran = if tran < 65_535, do: tran + 1, else: 1
-
-    # Avoid potential collision with control transactions
-    tran = if tran == state.last_ctl_transaction, do: tran + 1, else: tran
+    # Service requests have 2-byte transaction IDs.
+    # Use IDs from 256 to 65536 to avoid any confusion with control requests.
+    tran = if tran < 65_535, do: tran + 1, else: 256
 
     {tran, %{state | last_service_transaction: tran}}
   end
@@ -192,7 +130,6 @@ defmodule QMI.Driver do
   end
 
   defp pop_and_reply(state, %Message{transaction: transaction} = msg) do
-    require Logger
     result = if msg.code == :success, do: :ok, else: :error
 
     if result == :error do
