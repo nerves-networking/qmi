@@ -12,10 +12,9 @@ defmodule QMI.Codec.NetworkAccess do
   @spec get_signal_strength() :: QMI.request()
   def get_signal_strength() do
     %{
-      payload: [
+      payload:
         <<@get_signal_strength::16-little, 0x05::little-16, 0x10, 0x02::little-16,
-          0xEF::little-16>>
-      ],
+          0xEF::little-16>>,
       decode: &parse_get_signal_strength_resp/1
     }
   end
@@ -59,7 +58,7 @@ defmodule QMI.Codec.NetworkAccess do
   @spec get_home_network() :: QMI.request()
   def get_home_network() do
     %{
-      payload: [<<@get_home_network::little-16, 0x00, 0x00>>],
+      payload: <<@get_home_network::little-16, 0x00, 0x00>>,
       decode: &parse_get_home_network_resp/1
     }
   end
