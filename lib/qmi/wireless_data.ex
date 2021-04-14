@@ -8,18 +8,11 @@ defmodule QMI.WirelessData do
   @doc """
   Start the network interface
   """
-  @spec start_network_interface(QMI.control_point(), [
+  @spec start_network_interface(QMI.t(), [
           Codec.WirelessData.start_network_interface_opt()
-        ]) :: {:ok, map()}
-  def start_network_interface(control_point, opts \\ []) do
-    request = Codec.WirelessData.start_network_interface(opts)
-
-    case QMI.Driver.send(control_point.device, request.payload,
-           client_id: control_point.client_id,
-           service_id: control_point.service_id
-         ) do
-      {:ok, resp} ->
-        {:ok, request.decode.(resp)}
-    end
+        ]) :: {:ok, map()} | {:error, atom()}
+  def start_network_interface(qmi, opts \\ []) do
+    Codec.WirelessData.start_network_interface(opts)
+    |> QMI.call(qmi)
   end
 end

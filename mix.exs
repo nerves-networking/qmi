@@ -8,12 +8,18 @@ defmodule QMI.MixProject do
     [
       app: :qmi,
       version: @version,
+      description: description(),
+      package: package(),
+      source_url: @source_url,
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       compilers: [:elixir_make | Mix.compilers()],
       make_targets: ["all"],
       make_clean: ["clean"],
       deps: deps(),
+      dialyzer: [
+        flags: [:unmatched_returns, :error_handling, :race_conditions, :underspecs]
+      ],
       docs: docs(),
       package: package(),
       preferred_cli_env: [
@@ -30,8 +36,13 @@ defmodule QMI.MixProject do
     ]
   end
 
+  defp description do
+    "QMI!"
+  end
+
   defp deps do
     [
+      {:dialyxir, "~> 1.1.0", only: :dev, runtime: false},
       {:ex_doc, "~> 0.22", only: :docs, runtime: false},
       {:elixir_make, "~> 0.6", runtime: false}
     ]

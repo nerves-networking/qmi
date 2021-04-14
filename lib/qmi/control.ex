@@ -4,24 +4,18 @@ defmodule QMI.Control do
   @doc """
   Get a client id for a service
   """
-  def get_client_id(driver, service_id) do
-    request = Codec.Control.get_client_id(service_id)
-
-    case QMI.Driver.send(driver, request.payload) do
-      {:ok, resp} ->
-        {:ok, request.decode.(resp)}
-    end
+  @spec get_client_id(QMI.t(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, atom()}
+  def get_client_id(qmi, service_id) do
+    Codec.Control.get_client_id(service_id)
+    |> QMI.call(qmi)
   end
 
   @doc """
   Release a client id for a service
   """
-  def release_client_id(driver, control_point) do
-    request = Codec.Control.release_client_id(control_point.service_id, control_point.client_id)
-
-    case QMI.Driver.send(driver, request.payload) do
-      {:ok, resp} ->
-        {:ok, request.decode.(resp)}
-    end
+  @spec release_client_id(QMI.t(), non_neg_integer(), non_neg_integer()) :: :ok | {:error, atom()}
+  def release_client_id(qmi, service_id, client_id) do
+    Codec.Control.release_client_id(service_id, client_id)
+    |> QMI.call(qmi)
   end
 end
