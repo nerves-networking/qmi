@@ -2,6 +2,7 @@ defmodule QMI.Codec.NetworkAccess do
   @moduledoc """
   Codec for making network access service requests
   """
+  @network_access_service_id 0x03
 
   @get_signal_strength 0x0020
   @get_home_network 0x0025
@@ -12,6 +13,7 @@ defmodule QMI.Codec.NetworkAccess do
   @spec get_signal_strength() :: QMI.request()
   def get_signal_strength() do
     %{
+      service_id: @network_access_service_id,
       payload:
         <<@get_signal_strength::16-little, 0x05::little-16, 0x10, 0x02::little-16,
           0xEF::little-16>>,
@@ -58,6 +60,7 @@ defmodule QMI.Codec.NetworkAccess do
   @spec get_home_network() :: QMI.request()
   def get_home_network() do
     %{
+      service_id: @network_access_service_id,
       payload: <<@get_home_network::little-16, 0x00, 0x00>>,
       decode: &parse_get_home_network_resp/1
     }
