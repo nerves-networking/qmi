@@ -31,11 +31,12 @@ defmodule QMI.Driver do
   @doc """
   Send a message and return the response
   """
-  @spec send(GenServer.server(), QMI.request(), keyword()) :: {:ok, binary()} | {:error, atom()}
-  def send(server, request, opts \\ []) do
+  @spec call(GenServer.server(), non_neg_integer(), QMI.request(), keyword()) ::
+          {:ok, any()} | {:error, atom()}
+  def call(server, client_id, request, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, 5_000)
 
-    GenServer.call(server, {:send, request, timeout}, timeout * 2)
+    GenServer.call(server, {:call, client_id, request, timeout}, timeout * 2)
   end
 
   @impl GenServer
@@ -54,26 +55,21 @@ defmodule QMI.Driver do
   end
 
   @impl GenServer
-  def handle_call({:send, request, timeout}, from, state) do
-    # FIXME get_client_id(request.service_id)
-    client_id = 5
+  def handle_call({:call, client_id, request, timeout}, from, state) do
     {transaction, state} = do_request(request, client_id, state)
     timer = Process.send_after(self(), {:timeout, transaction}, timeout)
-    {:noreply, %{state | transactions: Map.put(state.transactions, transaction, {from, timer})}}
+
+    {:noreply,
+     %{state | transactions: Map.put(state.transactions, transaction, {from, request, timer})}}
   end
 
   @impl GenServer
-  def handle_info({:timeout, transaction}, state) do
-    state = pop_and_reply(state, transaction, {:error, :timeout})
-    {:noreply, state}
+  def handle_info({:timeout, transaction_id}, state) do
+    {:noreply, fail_transaction_id(state, transaction_id, :timeout)}
   end
 
   def handle_info({:dev_bridge, ref, :read, data}, %{ref: ref} = state) do
-    # TODO: Report indications somewhere?
-    decoded = QMI.Message.decode(data)
-    state = pop_and_reply(state, decoded)
-
-    {:noreply, state}
+    handle_report(QMI.Message.decode(data), state)
   end
 
   def handle_info({:dev_bridge, ref, :error, err}, %{ref: ref} = state) do
@@ -124,33 +120,28 @@ defmodule QMI.Driver do
     {tran, %{state | last_service_transaction: tran}}
   end
 
-  defp pop_and_reply(state, %Message{type: :indication} = msg) do
+  defp handle_report(%Message{type: :indication} = msg, state) do
     Logger.debug("QMI Indication: #{inspect(msg)}")
-    state
+
+    {:noreply, state}
   end
 
-  defp pop_and_reply(state, %Message{transaction: transaction} = msg) do
-    result = if msg.code == :success, do: :ok, else: :error
-
-    if result == :error do
-      Logger.warn("#{inspect(msg)}")
-    end
-
-    pop_and_reply(state, transaction, {result, msg.service_msg_bin})
+  defp handle_report(%Message{transaction: transaction_id, code: :success} = msg, state) do
+    {{from, request, timer}, transactions} = Map.pop(state.transactions, transaction_id)
+    _ = Process.cancel_timer(timer)
+    result = msg.service_msg_bin |> request.decode.()
+    GenServer.reply(from, result)
+    {:noreply, %{state | transactions: transactions}}
   end
 
-  defp pop_and_reply(state, transaction, reply) do
-    {meta, transactions} = Map.pop(state.transactions, transaction)
+  defp handle_report(%Message{transaction: transaction_id, code: error}, state) do
+    {:noreply, fail_transaction_id(state, transaction_id, error)}
+  end
 
-    case meta do
-      {from, timer} ->
-        _ = Process.cancel_timer(timer)
-        GenServer.reply(from, reply)
-
-      _ ->
-        :ignore
-    end
-
+  defp fail_transaction_id(state, transaction_id, error) do
+    {{from, _request, timer}, transactions} = Map.pop(state.transactions, transaction_id)
+    _ = Process.cancel_timer(timer)
+    GenServer.reply(from, {:error, error})
     %{state | transactions: transactions}
   end
 end

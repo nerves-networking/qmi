@@ -6,43 +6,97 @@ defmodule QMI do
   Example use:
 
   ```elixir
-  iex> QMI.configure_linux()
-  :ok
-  iex> {:ok, qmi} = QMI.start_link(device_path: "/dev/cdc-wm0")
+  iex> {:ok, qmi} = QMI.start_link(ifname: "wwan0")
   iex> QMI.WirelessData.start_network_interface(qmi, apn: "super")
   :ok
   iex> QMI.NetworkAccess.get_signal_strength(qmi)
-  %{rssis: [%{radio: :lte, rssi: -74}]}
+  {:ok, %{rssis: [%{radio: :lte, rssi: -74}]}}
   """
-  alias QMI.{ControlPointCache, Driver}
+  alias QMI.{Codec, Driver}
+
+  @type t() :: GenServer.server()
 
   @type request() :: %{
           service_id: non_neg_integer(),
           payload: iodata(),
-          decode: (binary() -> map())
+          decode: (binary() -> {:ok, any()} | {:error, atom()})
         }
 
   @typedoc """
   QMI GenServer options
 
-  * `:device_path` - the path to the QMI control device. i.e. `"/dev/cdc-wdm0"`
+  * `:ifname` - the network interface name. i.e. `"wwan0"`
+  * `:device_path` - the path to the QMI control device. Defaults to `"/dev/cdc-wdm<index>"`
+  where `index` matches the `ifname` index.
   * `:name` - an optional name for this GenServer
   """
-  @type options() :: [device_path: Path.t(), name: atom()]
+  @type options() :: [ifname: String.t(), device_path: Path.t(), name: atom()]
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
-    Keyword.has_key?(options, :device_path) || raise RuntimeError, "Must pass :device_path"
+    real_options = derive_options(options)
 
-    gen_server_options = Keyword.take(options, [:name])
-    GenServer.start_link(__MODULE__, options, gen_server_options)
+    gen_server_options = Keyword.take(real_options, [:name])
+    GenServer.start_link(__MODULE__, real_options, gen_server_options)
+  end
+
+  @doc """
+  Send a request over QMI and return the response
+
+  NOTE: the server parameter is second to facilitate piping
+  """
+  @spec call(request(), GenServer.server()) :: :ok | {:ok, any()} | {:error, atom()}
+  def call(request, server) do
+    get_call_function(server, request.service_id).(request)
+  end
+
+  # Helper function for getting everything that's needed to run the "call" in
+  # the process context calling `call/2`.
+  defp get_call_function(server, service_id) do
+    GenServer.call(server, {:get_call_function, service_id})
   end
 
   @impl GenServer
   def init(init_args) do
-    driver = Driver.start_link(init_args)
-    control_point_cache = ControlPointCache.start_link(init_args)
+    configure_linux(init_args[:ifname])
 
-    {:ok, %{driver: driver, control_point_cache: control_point_cache}}
+    driver = Driver.start_link(init_args)
+
+    {:ok, %{driver: driver, client_ids: %{}}}
+  end
+
+  @impl GenServer
+  def handle_call({:get_call_function, service_id}, _from, state) do
+    case state.client_ids[service_id] do
+      nil ->
+        request = Codec.Control.get_client_id(service_id)
+        {:ok, client_id} = Driver.call(state.driver, 0, request)
+        new_state = %{state | client_ids: Map.put(state.client_ids, service_id, client_id)}
+        {:reply, fn request -> Driver.call(state.driver, client_id, request) end, new_state}
+
+      client_id ->
+        {:reply, fn request -> Driver.call(state.driver, client_id, request) end, state}
+    end
+  end
+
+  defp derive_options(options) do
+    ifname = Keyword.fetch!(options, :ifname)
+    Keyword.put_new_lazy(options, :device_path, fn -> ifname_to_control_path(ifname) end)
+  end
+
+  defp ifname_to_control_path("wwan" <> index) do
+    "/dev/cdc-wdm" <> index
+  end
+
+  defp ifname_to_control_path(other) do
+    raise RuntimeError,
+          "Don't know how to derive control device from #{other}. Pass in a :device_path"
+  end
+
+  defp configure_linux(ifname) do
+    # This might not be true for all modems as some support 802.3 IP framing,
+    # however, on the EC25 supports raw IP framing. This feature can be detected
+    # and is probably a better solution that just forcing the raw IP framing.
+    File.write!("/sys/class/net/#{ifname}/qmi/raw_ip", "Y")
   end
 end
