@@ -3,6 +3,16 @@ defmodule QMI do
 
   @moduledoc """
 
+  Example use:
+
+  ```elixir
+  iex> QMI.configure_linux()
+  :ok
+  iex> {:ok, qmi} = QMI.start_link(device_path: "/dev/cdc-wm0")
+  iex> QMI.WirelessData.start_network_interface(qmi, apn: "super")
+  :ok
+  iex> QMI.NetworkAccess.get_signal_strength(qmi)
+  %{rssis: [%{radio: :lte, rssi: -74}]}
   """
   alias QMI.{ControlPointCache, Driver}
 
