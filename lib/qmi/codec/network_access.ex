@@ -41,7 +41,7 @@ defmodule QMI.Codec.NetworkAccess do
   @doc """
   Parse the get signal strength response
   """
-  @spec parse_get_signal_strength_resp(binary()) :: signal_strength_report()
+  @spec parse_get_signal_strength_resp(binary()) :: {:ok, signal_strength_report()}
   def parse_get_signal_strength_resp(
         <<@get_signal_strength::little-16, _length::little-16, tlvs::binary>>
       ) do
@@ -49,7 +49,7 @@ defmodule QMI.Codec.NetworkAccess do
   end
 
   defp parse_get_signal_strength_tlvs(parsed, <<>>) do
-    parsed
+    {:ok, parsed}
   end
 
   defp parse_get_signal_strength_tlvs(
@@ -95,7 +95,7 @@ defmodule QMI.Codec.NetworkAccess do
   defp parse_get_home_network_resp(
          <<@get_home_network::little-16, size::little-16, tlvs::size(size)-binary>>
        ) do
-    {:ok, parse_get_home_network_tlvs(%{}, tlvs)}
+    parse_get_home_network_tlvs(%{}, tlvs)
   end
 
   defp parse_get_home_network_resp(_other) do
@@ -103,13 +103,15 @@ defmodule QMI.Codec.NetworkAccess do
   end
 
   defp parse_get_home_network_tlvs(parsed, <<>>) do
-    parsed
+    {:ok, parsed}
   end
 
   defp parse_get_home_network_tlvs(
          parsed,
-         <<0x01, 0x04::little-16, mcc::little-16, mnc::little-16, rest::binary>>
+         <<0x01, size::little-16, values::size(size)-binary, rest::binary>>
        ) do
+    <<mcc::little-16, mnc::little-16, _description::binary>> = values
+
     parsed
     |> Map.put(:mcc, mcc)
     |> Map.put(:mnc, mnc)

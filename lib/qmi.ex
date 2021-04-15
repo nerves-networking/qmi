@@ -32,6 +32,17 @@ defmodule QMI do
   """
   @type options() :: [ifname: String.t(), device_path: Path.t(), name: atom()]
 
+  @doc """
+  Configure the framing when using linux
+  """
+  @spec configure_linux(String.t()) :: :ok
+  def configure_linux(ifname) do
+    # This might not be true for all modems as some support 802.3 IP framing,
+    # however, on the EC25 supports raw IP framing. This feature can be detected
+    # and is probably a better solution that just forcing the raw IP framing.
+    File.write!("/sys/class/net/#{ifname}/qmi/raw_ip", "Y")
+  end
+
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     real_options = derive_options(options)
@@ -58,9 +69,7 @@ defmodule QMI do
 
   @impl GenServer
   def init(init_args) do
-    configure_linux(init_args[:ifname])
-
-    driver = Driver.start_link(init_args)
+    {:ok, driver} = Driver.start_link(init_args)
 
     {:ok, %{driver: driver, client_ids: %{}}}
   end
@@ -91,12 +100,5 @@ defmodule QMI do
   defp ifname_to_control_path(other) do
     raise RuntimeError,
           "Don't know how to derive control device from #{other}. Pass in a :device_path"
-  end
-
-  defp configure_linux(ifname) do
-    # This might not be true for all modems as some support 802.3 IP framing,
-    # however, on the EC25 supports raw IP framing. This feature can be detected
-    # and is probably a better solution that just forcing the raw IP framing.
-    File.write!("/sys/class/net/#{ifname}/qmi/raw_ip", "Y")
   end
 end
