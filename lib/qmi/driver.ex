@@ -73,7 +73,7 @@ defmodule QMI.Driver do
   end
 
   def handle_info({:dev_bridge, ref, :error, err}, %{ref: ref} = state) do
-    Logger.error("[QMI.Driver] #{state.dev} closed - #{inspect(err)}")
+    Logger.error("[QMI.Driver] #{state.device_path} closed - #{inspect(err)}")
     {:noreply, state, {:continue, :open}}
   end
 

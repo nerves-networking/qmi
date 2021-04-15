@@ -12,7 +12,7 @@ defmodule QMI.Codec.NetworkAccessTest do
     assert request.service_id == 0x03
 
     assert request.decode.(<<0x20, 0, 7::little-16, 0x11, 2::little-16, 1::little-16, 10, 0x08>>) ==
-             %{rssis: [%{radio: :lte, rssi: -10}]}
+             {:ok, %{rssis: [%{radio: :lte, rssi: -10}]}}
   end
 
   test "get_home_network/0" do
@@ -25,6 +25,6 @@ defmodule QMI.Codec.NetworkAccessTest do
              <<0x25::little-16, 0x07::little-16, 0x01, 0x04::little-16, 0xDD::little-16,
                0xEF::little-16>>
            ) ==
-             %{mcc: 221, mnc: 239}
+             {:ok, %{mcc: 221, mnc: 239}}
   end
 end

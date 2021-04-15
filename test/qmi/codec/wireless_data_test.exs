@@ -15,6 +15,6 @@ defmodule QMI.Codec.WirelessDataTest do
              <<0x0020::little-16, 0x07::little-16, 0x01, 0x04::little-16, 0x01, 0x00, 0x00,
                0x000>>
            ) ==
-             %{packet_data_handle: 0x01}
+             {:ok, %{packet_data_handle: 0x01}}
   end
 end
