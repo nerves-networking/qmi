@@ -16,7 +16,7 @@ defmodule QMI.Codec.NetworkAccess do
   Report from requesting the signal strength
   """
   @type signal_strength_report() :: %{
-          rssis: [%{radio: radio_interface(), rssi: integer()}]
+          rssi_reports: [%{radio: radio_interface(), rssi: integer()}]
         }
 
   @typedoc """
@@ -45,7 +45,7 @@ defmodule QMI.Codec.NetworkAccess do
   def parse_get_signal_strength_resp(
         <<@get_signal_strength::little-16, _length::little-16, tlvs::binary>>
       ) do
-    parse_get_signal_strength_tlvs(%{rssis: []}, tlvs)
+    parse_get_signal_strength_tlvs(%{rssi_reports: []}, tlvs)
   end
 
   defp parse_get_signal_strength_tlvs(parsed, <<>>) do
@@ -57,11 +57,11 @@ defmodule QMI.Codec.NetworkAccess do
          <<0x11, _length::little-16, num_sets::little-16,
            rssi_list::size(num_sets)-unit(16)-binary, rest::binary>>
        ) do
-    rssis =
+    rssi_reports =
       for <<rssi, radio_if <- rssi_list>>, do: %{rssi: -rssi, radio: radio_interface(radio_if)}
 
     parsed
-    |> Map.put(:rssis, rssis)
+    |> Map.put(:rssi_reports, rssi_reports)
     |> parse_get_signal_strength_tlvs(rest)
   end
 
