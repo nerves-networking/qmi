@@ -1,4 +1,6 @@
 defmodule QMI.Driver do
+  @moduledoc false
+
   use GenServer
 
   require Logger
@@ -8,6 +10,8 @@ defmodule QMI.Driver do
   @type response :: {:ok, Message.t()} | {:error, Message.t() | :timeout}
 
   defmodule State do
+    @moduledoc false
+
     defstruct bridge: nil,
               caller: nil,
               device_path: nil,

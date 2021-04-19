@@ -1,6 +1,6 @@
 defmodule QMI.WirelessData do
   @moduledoc """
-
+  Provides command related to wireless messaging
   """
 
   alias QMI.Codec
