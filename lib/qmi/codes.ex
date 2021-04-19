@@ -1,4 +1,6 @@
 defmodule QMI.Codes do
+  @moduledoc false
+
   # QMI_ERR_NONE
   @error_codes %{
     0x0000 => :none,

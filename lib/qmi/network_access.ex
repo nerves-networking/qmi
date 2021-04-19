@@ -1,9 +1,8 @@
 defmodule QMI.NetworkAccess do
-  alias QMI.Codec
-
   @moduledoc """
-
+  Provides commands related to network access
   """
+  alias QMI.Codec
 
   @doc """
   Get the current signal strength

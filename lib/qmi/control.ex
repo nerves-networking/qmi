@@ -1,4 +1,7 @@
 defmodule QMI.Control do
+  @moduledoc """
+  Provides commands related to QMUX link and client management
+  """
   alias QMI.Codec
 
   @doc """
