@@ -10,7 +10,7 @@ defmodule QMI do
   iex> QMI.WirelessData.start_network_interface(qmi, apn: "super")
   :ok
   iex> QMI.NetworkAccess.get_signal_strength(qmi)
-  {:ok, %{rssis: [%{radio: :lte, rssi: -74}]}}
+  {:ok, %{rssi_reports: [%{radio: :lte, rssi: -74}]}}
   """
   alias QMI.{Codec, Driver}
 
