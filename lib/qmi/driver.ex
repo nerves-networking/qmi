@@ -121,7 +121,7 @@ defmodule QMI.Driver do
   end
 
   defp handle_report(%Message{type: :indication} = msg, state) do
-    Logger.debug("QMI Indication: #{inspect(msg)}")
+    Logger.warn("QMI: Ignoring indication: #{inspect(msg, limit: :infinity)}")
 
     {:noreply, state}
   end
@@ -130,6 +130,15 @@ defmodule QMI.Driver do
     {{from, request, timer}, transactions} = Map.pop(state.transactions, transaction_id)
     _ = Process.cancel_timer(timer)
     result = msg.service_msg_bin |> request.decode.()
+
+    if match?({:error, _reason}, result) do
+      Logger.warn(
+        "QMI: Error decoding response to #{inspect(request)}: message was #{
+          inspect(msg.service_msg_bin, limit: :infinity)
+        }"
+      )
+    end
+
     GenServer.reply(from, result)
     {:noreply, %{state | transactions: transactions}}
   end
