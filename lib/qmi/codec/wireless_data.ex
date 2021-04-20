@@ -5,6 +5,11 @@ defmodule QMI.Codec.WirelessData do
 
   @start_network_interface 0x0020
 
+  @typedoc """
+  Options for whens starting a network interface
+
+  * `:apn` - the name of our APN
+  """
   @type start_network_interface_opt() :: {:apn, String.t()}
 
   @typedoc """

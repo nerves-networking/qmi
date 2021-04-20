@@ -38,13 +38,9 @@ defmodule QMI.Codec.NetworkAccess do
     }
   end
 
-  @doc """
-  Parse the get signal strength response
-  """
-  @spec parse_get_signal_strength_resp(binary()) :: {:ok, signal_strength_report()}
-  def parse_get_signal_strength_resp(
-        <<@get_signal_strength::little-16, _length::little-16, tlvs::binary>>
-      ) do
+  defp parse_get_signal_strength_resp(
+         <<@get_signal_strength::little-16, _length::little-16, tlvs::binary>>
+       ) do
     parse_get_signal_strength_tlvs(%{rssi_reports: []}, tlvs)
   end
 

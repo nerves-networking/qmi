@@ -17,3 +17,13 @@ iex> QMI.NetworkAccess.get_signal_strength(qmi)
 
 If you are using Linux you will need to call `QMI.configure_linux/1` before
 bring the interface up.
+
+## Install
+
+```elixir
+def deps do
+  [
+    {:qmi, "~> 0.2.0"}
+  ]
+end
+```
