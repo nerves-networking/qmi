@@ -1,7 +1,6 @@
 defmodule QMI do
-  use GenServer
-
   @moduledoc """
+  Send QMI messages to a QMI device
 
   Example use:
 
@@ -11,11 +10,37 @@ defmodule QMI do
   :ok
   iex> QMI.NetworkAccess.get_signal_strength(qmi)
   {:ok, %{rssi_reports: [%{radio: :lte, rssi: -74}]}}
+  ```
+
+  Starting QMI in a supervision tree
+
+  ```elixir
+
+  children = [
+    #... other children ...
+    {QMI, ifname: "wwan0", name: MyApp.QMI}
+    #... other children ...
+  ]
+
+  # Later in your app
+
+  QMI.NetworkAccess.get_signal_strength(MyApp.QMI)
+  ```
   """
+
+  use GenServer
+
   alias QMI.{Codec, Driver}
 
   @type t() :: GenServer.server()
 
+  @typedoc """
+  Structure that contains information about how to handle a QMI service message
+
+  * `:service_id` - which service this request is for
+  * `:payload` - iodata of the message being sent
+  * `:decode` - a function that will be used to decode the incoming response
+  """
   @type request() :: %{
           service_id: non_neg_integer(),
           payload: iodata(),
@@ -43,6 +68,9 @@ defmodule QMI do
     File.write!("/sys/class/net/#{ifname}/qmi/raw_ip", "Y")
   end
 
+  @doc """
+  Start the server
+  """
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     real_options = derive_options(options)

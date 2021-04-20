@@ -52,11 +52,26 @@ defmodule QMI.MixProject do
   def docs do
     [
       assets: "assets",
-      extras: ["README.md", "CHANGELOG.md"],
+      extras: [
+        "README.md",
+        "CHANGELOG.md"
+      ],
       main: "readme",
       source_ref: "v#{@version}",
       source_url: @source_url,
-      skip_undefined_reference_warnings_on: ["CHANGELOG.md"]
+      skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
+      groups_for_modules: [
+        Services: [
+          QMI.Control,
+          QMI.NetworkAccess,
+          QMI.WirelessData
+        ],
+        Codec: [
+          QMI.Codec.Control,
+          QMI.Codec.NetworkAccess,
+          QMI.Codec.WirelessData
+        ]
+      ]
     ]
   end
 

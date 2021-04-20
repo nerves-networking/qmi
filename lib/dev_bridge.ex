@@ -1,11 +1,12 @@
 defmodule DevBridge do
-  @moduledoc """
-  Interact with special files in `/dev` without messing up the BEAM*
+  @moduledoc false
 
-  *Well, you can still mess it up and probably in even better ways, but this
-  module saves you from the blocking and other odd behavior from device files
-  that makes Erlang refuse to open the files.
-  """
+  # Interact with special files in `/dev` without messing up the BEAM*
+
+  # *Well, you can still mess it up and probably in even better ways, but this
+  # module saves you from the blocking and other odd behavior from device files
+  # that makes Erlang refuse to open the files.
+
   use GenServer
   require Logger
 

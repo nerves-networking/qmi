@@ -7,10 +7,14 @@ defmodule QMI.WirelessData do
 
   @doc """
   Start the network interface
+
+  This will return once a packet data session is established and the interface
+  can perform IP address configuration. That means once this returns you can
+  configure the interface via DHCP.
   """
   @spec start_network_interface(QMI.t(), [
           Codec.WirelessData.start_network_interface_opt()
-        ]) :: {:ok, map()} | {:error, atom()}
+        ]) :: {:ok, Codec.WirelessData.start_network_report()} | {:error, atom()}
   def start_network_interface(qmi, opts \\ []) do
     Codec.WirelessData.start_network_interface(opts)
     |> QMI.call(qmi)

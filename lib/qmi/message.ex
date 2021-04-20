@@ -1,12 +1,12 @@
 defmodule QMI.Message do
+  @moduledoc false
+
   alias QMI.Codes
 
-  @moduledoc """
-  QMI message structures and handling
+  # QMI message structures and handling
 
-  Based on definitions from https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/master/src/libqmi-glib/qmi-message.c
-  tlv = Type-Length-Value
-  """
+  # Based on definitions from https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/master/src/libqmi-glib/qmi-message.c
+  # tlv = Type-Length-Value
 
   @type type :: :response | :indication | :request
 
