@@ -82,10 +82,6 @@ defmodule QMI.Message do
     message
   end
 
-  defp maybe_decode_tlvs(%{type: :indication} = message) do
-    message
-  end
-
   defp maybe_decode_tlvs(message), do: message
 
   # If the message is a QMI_CTL message, transaction is only 1 byte
