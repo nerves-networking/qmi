@@ -73,7 +73,17 @@ defmodule QMI.Driver do
   end
 
   def handle_info({:dev_bridge, ref, :read, data}, %{ref: ref} = state) do
-    handle_report(QMI.Message.decode(data), state)
+    case QMI.Message.decode(data) do
+      {:ok, message} ->
+        handle_report(message, state)
+
+      {:error, _reason} ->
+        Logger.warn(
+          "[QMI.Driver] #{state.device_path} invalid message from QMI: #{inspect(data)}"
+        )
+
+        {:noreply, state}
+    end
   end
 
   def handle_info({:dev_bridge, ref, :error, err}, %{ref: ref} = state) do
