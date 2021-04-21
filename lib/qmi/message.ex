@@ -8,19 +8,20 @@ defmodule QMI.Message do
   # Based on definitions from https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/master/src/libqmi-glib/qmi-message.c
   # tlv = Type-Length-Value
 
-  @type type :: :response | :indication | :request
+  @type type :: :response | :indication | :request | :compound | :none | :reserved
 
   @type t :: %__MODULE__{
           length: integer(),
           flags: integer(),
-          service: module(),
+          service: byte(),
           client: integer(),
           code: :success | :failure,
           error: integer() | atom(),
           type: type(),
-          transaction: integer(),
-          id: integer(),
-          tlvs: [map()] | binary() | map(),
+          transaction: 0..65_535,
+          id: 0..65_535,
+          tlvs: binary(),
+          raw: binary(),
           service_msg_bin: binary()
         }
 
@@ -39,6 +40,7 @@ defmodule QMI.Message do
     :service_msg_bin
   ]
 
+  @spec decode(binary()) :: {:ok, QMI.Message.t()} | {:error, :bad_qmux_frame}
   def decode(<<1, len::16-little, flags, service, client, bin::binary>> = raw) do
     {type, transaction, service_msg_bin} = pop_type_and_transaction(service, bin)
 
@@ -50,19 +52,22 @@ defmodule QMI.Message do
     #
     <<msg_id::16-little, _msg_len::16-little, raw_tlvs::binary>> = service_msg_bin
 
-    %__MODULE__{
-      length: len,
-      flags: flags,
-      service: service,
-      client: client,
-      type: type,
-      transaction: transaction,
-      id: msg_id,
-      tlvs: raw_tlvs,
-      raw: raw,
-      service_msg_bin: service_msg_bin
-    }
-    |> maybe_decode_tlvs()
+    message =
+      %__MODULE__{
+        length: len,
+        flags: flags,
+        service: service,
+        client: client,
+        type: type,
+        transaction: transaction,
+        id: msg_id,
+        tlvs: raw_tlvs,
+        raw: raw,
+        service_msg_bin: service_msg_bin
+      }
+      |> maybe_decode_tlvs()
+
+    {:ok, message}
   end
 
   def decode(_), do: {:error, :bad_qmux_frame}
