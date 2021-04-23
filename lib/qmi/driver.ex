@@ -5,10 +5,6 @@ defmodule QMI.Driver do
 
   require Logger
 
-  alias QMI.Message
-
-  @type response :: {:ok, Message.t()} | {:error, Message.t() | :timeout}
-
   defmodule State do
     @moduledoc false
 
@@ -134,21 +130,21 @@ defmodule QMI.Driver do
     {tran, %{state | last_service_transaction: tran}}
   end
 
-  defp handle_report(%Message{type: :indication} = msg, state) do
+  defp handle_report(%{type: :indication} = msg, state) do
     Logger.warn("QMI: Ignoring indication: #{inspect(msg, limit: :infinity)}")
 
     {:noreply, state}
   end
 
-  defp handle_report(%Message{transaction: transaction_id, code: :success} = msg, state) do
+  defp handle_report(%{transaction_id: transaction_id, code: :success} = msg, state) do
     {{from, request, timer}, transactions} = Map.pop(state.transactions, transaction_id)
     _ = Process.cancel_timer(timer)
-    result = msg.service_msg_bin |> request.decode.()
+    result = msg.message |> request.decode.()
 
     if match?({:error, _reason}, result) do
       Logger.warn(
         "QMI: Error decoding response to #{inspect(request)}: message was #{
-          inspect(msg.service_msg_bin, limit: :infinity)
+          inspect(msg.message, limit: :infinity)
         }"
       )
     end
@@ -157,7 +153,7 @@ defmodule QMI.Driver do
     {:noreply, %{state | transactions: transactions}}
   end
 
-  defp handle_report(%Message{transaction: transaction_id, code: error}, state) do
+  defp handle_report(%{transaction_id: transaction_id, code: error}, state) do
     {:noreply, fail_transaction_id(state, transaction_id, error)}
   end
 
