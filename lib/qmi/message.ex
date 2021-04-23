@@ -3,115 +3,59 @@ defmodule QMI.Message do
 
   alias QMI.Codes
 
-  # QMI message structures and handling
+  @type type() :: :response | :indication | :request | :compound | :none | :reserved
 
-  # Based on definitions from https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/master/src/libqmi-glib/qmi-message.c
-  # tlv = Type-Length-Value
-
-  @type type :: :response | :indication | :request | :compound | :none | :reserved
-
-  @type t :: %__MODULE__{
-          length: integer(),
-          flags: integer(),
-          service: byte(),
-          client: integer(),
-          code: :success | :failure,
-          error: integer() | atom(),
+  @type t() :: %{
           type: type(),
-          transaction: 0..65_535,
-          id: 0..65_535,
-          tlvs: binary(),
-          raw: binary(),
-          service_msg_bin: binary()
+          transaction_id: 0..65_535,
+          message: binary(),
+          code: :success | :failure,
+          error: 0..65_535 | atom()
         }
 
-  defstruct [
-    :length,
-    :flags,
-    :service,
-    :client,
-    :code,
-    :error,
-    :type,
-    :transaction,
-    :id,
-    :tlvs,
-    :raw,
-    :service_msg_bin
-  ]
-
-  @spec decode(binary()) :: {:ok, QMI.Message.t()} | {:error, :bad_qmux_frame}
-  def decode(<<1, len::16-little, flags, service, client, bin::binary>> = raw) do
-    {type, transaction, service_msg_bin} = pop_type_and_transaction(service, bin)
-
-    ##
-    # I only have partial messages right now, so let the length slide by here.
-    # Change later to be more strict on checking length
-    #
-    # <<msg_id::16-little, msg_len::16-little, result_and_tlvs::binary-size(msg_len)>> = service_msg_bin
-    #
-    <<msg_id::16-little, _msg_len::16-little, raw_tlvs::binary>> = service_msg_bin
+  @spec decode(binary()) :: {:ok, t()} | {:error, :bad_qmux_frame}
+  def decode(<<0x01, _len::16-little, _flags, service, _client, bin::binary>>) do
+    transaction_size = if service == 0x00, do: 8, else: 16
+    <<type, transaction::size(transaction_size)-little, message_body::binary>> = bin
 
     message =
-      %__MODULE__{
-        length: len,
-        flags: flags,
-        service: service,
-        client: client,
-        type: type,
-        transaction: transaction,
-        id: msg_id,
-        tlvs: raw_tlvs,
-        raw: raw,
-        service_msg_bin: service_msg_bin
+      %{
+        type: message_type(service, type),
+        message: message_body,
+        transaction_id: transaction
       }
-      |> maybe_decode_tlvs()
+      |> get_codes()
 
     {:ok, message}
   end
 
   def decode(_), do: {:error, :bad_qmux_frame}
 
-  defp maybe_decode_tlvs(%{type: :response} = message) do
-    # Every response _should_ have a result TLV first
-    # Pop the code and error from result TLV before attempting to decode tlvs
-    <<2, 4::16-little, code::16-little, error::16-little, raw_tlvs::binary>> = message.tlvs
+  # types for control service
+  defp message_type(0x00, 0x00), do: :request
+  defp message_type(0x00, 0x01), do: :response
+  defp message_type(0x00, 0x02), do: :indication
+  defp message_type(0x00, _), do: :reserved
 
-    message = %{
-      message
-      | code: Codes.decode_result_code(code),
-        error: Codes.decode_error_code(error),
-        tlvs: raw_tlvs
-    }
+  # types for services other than control
+  defp message_type(_service_id, 0x00), do: :request
+  defp message_type(_service_id, 0x01), do: :compound
+  defp message_type(_service_id, 0x02), do: :response
+  defp message_type(_service_id, 0x04), do: :indication
+  defp message_type(_service_id, _), do: :none
 
+  defp get_codes(
+         %{
+           type: :response,
+           message:
+             <<_message_id::16-little, _message_size::16-little, 0x02, 0x04::16-little,
+               code::16-little, error::16-little, _rest::binary>>
+         } = message
+       ) do
     message
+    |> Map.put(:code, Codes.decode_result_code(code))
+    |> Map.put(:error, Codes.decode_error_code(error))
   end
 
-  defp maybe_decode_tlvs(message), do: message
-
-  # If the message is a QMI_CTL message, transaction is only 1 byte
-  defp pop_type_and_transaction(0x00, <<type, transaction, rest::binary>>) do
-    type =
-      case type do
-        0 -> :request
-        1 -> :response
-        2 -> :indication
-        _ -> :reserved
-      end
-
-    {type, transaction, rest}
-  end
-
-  defp pop_type_and_transaction(_service, <<type, transaction::16-little, rest::binary>>) do
-    type =
-      case type do
-        0 -> :request
-        1 -> :compound
-        2 -> :response
-        4 -> :indication
-        _ -> :none
-      end
-
-    {type, transaction, rest}
-  end
+  defp get_codes(message), do: message
 end
