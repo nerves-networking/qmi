@@ -23,7 +23,7 @@ bring the interface up.
 ```elixir
 def deps do
   [
-    {:qmi, "~> 0.2.0"}
+    {:qmi, "~> 0.3.0"}
   ]
 end
 ```
