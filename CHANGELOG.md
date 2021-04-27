@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.1
+
+### Fixes
+
+- Fix type spec for `QMI.Codec.NetworkAccess.home_network_report()`
+- Fix error when the device closes and QMI retries to open the device
+
 ## v0.3.0
 
 ### Improvements
