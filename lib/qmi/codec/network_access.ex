@@ -22,7 +22,7 @@ defmodule QMI.Codec.NetworkAccess do
   @typedoc """
   Report from requesting the home network
   """
-  @type home_network_report() :: %{mmc: char(), mnc: char()}
+  @type home_network_report() :: %{mcc: char(), mnc: char()}
 
   @doc """
   Make the `QMI.request()` for getting signal strength
