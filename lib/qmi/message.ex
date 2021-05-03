@@ -8,6 +8,7 @@ defmodule QMI.Message do
   @type t() :: %{
           type: type(),
           transaction_id: 0..65_535,
+          service_id: 0..255,
           message: binary(),
           code: :success | :failure,
           error: 0..65_535 | atom()
@@ -20,6 +21,7 @@ defmodule QMI.Message do
 
     message =
       %{
+        service_id: service,
         type: message_type(service, type),
         message: message_body,
         transaction_id: transaction
