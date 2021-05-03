@@ -4,8 +4,12 @@ defmodule QMI.Codec.NetworkAccess do
   """
   @network_access_service_id 0x03
 
+  # messages
   @get_signal_strength 0x0020
   @get_home_network 0x0025
+
+  # indications
+  @serving_system_indication 0x0024
 
   @typedoc """
   The radio interface that is being reported
@@ -23,6 +27,24 @@ defmodule QMI.Codec.NetworkAccess do
   Report from requesting the home network
   """
   @type home_network_report() :: %{mcc: char(), mnc: char()}
+
+  @type serving_system_registration_state() ::
+          :not_registered | :registered | :registration_denied | :registration_unknown
+
+  @type attach_state() :: :unknown | :attached | :detached
+
+  @type network() :: :network_unknown | :network_3gpp2 | :network_3gpp
+
+  @type service_system_indication() :: %{
+          name: :service_system_indication,
+          service_id: 0x03,
+          indication_id: 0x0024,
+          serving_system_registration_state: serving_system_registration_state(),
+          serving_system_cs_attach_state: attach_state(),
+          serving_system_ps_attach_state: attach_state(),
+          serving_system_selected_network: network(),
+          serving_system_radio_interface: [radio_interface()]
+        }
 
   @doc """
   Make the `QMI.request()` for getting signal strength
@@ -66,6 +88,12 @@ defmodule QMI.Codec.NetworkAccess do
          <<_type, length::little-16, _values::size(length)-unit(8)-binary, rest::binary>>
        ) do
     parse_get_signal_strength_tlvs(parsed, rest)
+  end
+
+  defp radio_interfaces(radio_ifs) do
+    for <<radio_if <- radio_ifs>> do
+      radio_interface(radio_if)
+    end
   end
 
   defp radio_interface(0x00), do: :no_service
@@ -120,4 +148,80 @@ defmodule QMI.Codec.NetworkAccess do
        ) do
     parse_get_home_network_tlvs(parsed, rest)
   end
+
+  @doc """
+  Parse an indication
+  """
+  @spec parse_indication(binary()) ::
+          {:ok, service_system_indication()} | {:error, :invalid_indication}
+  def parse_indication(
+        <<@serving_system_indication::16-little, size::16-little, tlvs::binary-size(size)>>
+      ) do
+    result =
+      :serving_system_indication
+      |> init_indication()
+      |> parse_serving_system_indication(tlvs)
+
+    {:ok, result}
+  end
+
+  def parse_indication(_other) do
+    {:error, :invalid_indication}
+  end
+
+  defp init_indication(:serving_system_indication = name) do
+    %{
+      name: name,
+      indication_id: @serving_system_indication,
+      service_id: @network_access_service_id,
+      serving_system_registration_state: :not_registered,
+      serving_system_cs_attach_state: :unknown,
+      serving_system_ps_attach_state: :unknown,
+      serving_system_selected_network: :network_unknown,
+      serving_system_radio_interfaces: []
+    }
+  end
+
+  defp parse_serving_system_indication(parsed, <<>>) do
+    parsed
+  end
+
+  defp parse_serving_system_indication(
+         parsed,
+         <<0x01, length::16-little, values::size(length)-binary, rest::binary>>
+       ) do
+    <<registration_state, cs_attach_state, ps_attach_state, selected_network, num_radio_if,
+      radio_if::size(num_radio_if)-binary>> = values
+
+    parsed = %{
+      parsed
+      | serving_system_registration_state: serving_system_registration_state(registration_state),
+        serving_system_cs_attach_state: serving_system_attach_state(cs_attach_state),
+        serving_system_ps_attach_state: serving_system_attach_state(ps_attach_state),
+        serving_system_selected_network: serving_system_network(selected_network),
+        serving_system_radio_interfaces: radio_interfaces(radio_if)
+    }
+
+    parse_serving_system_indication(parsed, rest)
+  end
+
+  defp parse_serving_system_indication(
+         parsed,
+         <<_type, length::16-little, _values::size(length)-binary, rest::binary>>
+       ) do
+    parse_serving_system_indication(parsed, rest)
+  end
+
+  defp serving_system_registration_state(0x00), do: :not_registered
+  defp serving_system_registration_state(0x01), do: :registered
+  defp serving_system_registration_state(0x02), do: :registration_denied
+  defp serving_system_registration_state(0x04), do: :registration_unknown
+
+  defp serving_system_attach_state(0x00), do: :unknown
+  defp serving_system_attach_state(0x01), do: :attached
+  defp serving_system_attach_state(0x02), do: :detached
+
+  defp serving_system_network(0x00), do: :network_unknown
+  defp serving_system_network(0x01), do: :network_3gpp2
+  defp serving_system_network(0x02), do: :network_3gpp
 end

@@ -13,6 +13,7 @@ defmodule QMI.MessageTest do
       expected_message = %{
         type: :response,
         transaction_id: 0x01,
+        service_id: 0x00,
         code: :success,
         error: :none,
         message: make_service_message(:success)
@@ -27,6 +28,7 @@ defmodule QMI.MessageTest do
       expected_message = %{
         type: :indication,
         transaction_id: 0x01,
+        service_id: 0x00,
         message: <<0x10, 0x00, 0x00, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00>>
       }
 
@@ -39,6 +41,7 @@ defmodule QMI.MessageTest do
       expected_message = %{
         type: :response,
         transaction_id: 0x01,
+        service_id: 0x00,
         code: :failure,
         error: :no_permission,
         message: make_service_message(:error)
@@ -56,6 +59,7 @@ defmodule QMI.MessageTest do
       expected_message = %{
         type: :response,
         transaction_id: 0x01,
+        service_id: 0x03,
         code: :success,
         error: :none,
         message: make_service_message(:success)
@@ -71,6 +75,7 @@ defmodule QMI.MessageTest do
       expected_message = %{
         type: :response,
         transaction_id: 0x01,
+        service_id: 0x03,
         code: :failure,
         error: :no_permission,
         message: make_service_message(:error)
