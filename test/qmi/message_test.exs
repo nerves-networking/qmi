@@ -4,7 +4,7 @@ defmodule QMI.MessageTest do
   alias QMI.Message
 
   @control_service_id 0x00
-  @networwork_access_service_id 0x03
+  @network_access_service_id 0x03
 
   describe "control service messages" do
     test "response" do
@@ -51,7 +51,7 @@ defmodule QMI.MessageTest do
   describe "service messages" do
     test "response" do
       network_access_message_response =
-        make_message(@networwork_access_service_id, <<0x01::16-little>>, 0x02, :success)
+        make_message(@network_access_service_id, <<0x01::16-little>>, 0x02, :success)
 
       expected_message = %{
         type: :response,
@@ -66,7 +66,7 @@ defmodule QMI.MessageTest do
 
     test "error" do
       network_access_message_response =
-        make_message(@networwork_access_service_id, <<0x01::16-little>>, 0x02, :error)
+        make_message(@network_access_service_id, <<0x01::16-little>>, 0x02, :error)
 
       expected_message = %{
         type: :response,
