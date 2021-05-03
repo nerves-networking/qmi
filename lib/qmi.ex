@@ -86,7 +86,10 @@ defmodule QMI do
   """
   @spec call(request(), GenServer.server()) :: :ok | {:ok, any()} | {:error, atom()}
   def call(request, server) do
-    get_call_function(server, request.service_id).(request)
+    case get_call_function(server, request.service_id) do
+      {:ok, call_func} -> call_func.(request)
+      {:error, _reason} = error -> error
+    end
   end
 
   # Helper function for getting everything that's needed to run the "call" in
@@ -104,15 +107,17 @@ defmodule QMI do
 
   @impl GenServer
   def handle_call({:get_call_function, service_id}, _from, state) do
-    case state.client_ids[service_id] do
-      nil ->
-        request = Codec.Control.get_client_id(service_id)
-        {:ok, client_id} = Driver.call(state.driver, 0, request)
-        new_state = %{state | client_ids: Map.put(state.client_ids, service_id, client_id)}
-        {:reply, fn request -> Driver.call(state.driver, client_id, request) end, new_state}
+    with nil <- state.client_ids[service_id],
+         request = Codec.Control.get_client_id(service_id),
+         {:ok, client_id} <- Driver.call(state.driver, 0, request) do
+      new_state = %{state | client_ids: Map.put(state.client_ids, service_id, client_id)}
+      {:reply, {:ok, fn request -> Driver.call(state.driver, client_id, request) end}, new_state}
+    else
+      {:error, _reason} = error ->
+        {:reply, error, state}
 
       client_id ->
-        {:reply, fn request -> Driver.call(state.driver, client_id, request) end, state}
+        {:reply, {:ok, fn request -> Driver.call(state.driver, client_id, request) end}, state}
     end
   end
 
