@@ -141,7 +141,13 @@ defmodule QMI.Driver do
   end
 
   defp handle_report(%{type: :indication} = msg, state) do
-    Logger.warn("QMI: Ignoring indication: #{inspect(msg, limit: :infinity)}")
+    case QMI.Codec.Indication.parse(msg) do
+      {:ok, info} ->
+        Logger.warn("QMI: Ignoring indication: #{inspect(info, limit: :infinity)}")
+
+      {:error, _} ->
+        Logger.warn("QMI: Unknown indication: #{inspect(msg, limit: :infinity)}")
+    end
 
     {:noreply, state}
   end
