@@ -35,15 +35,15 @@ defmodule QMI.Codec.NetworkAccess do
 
   @type network() :: :network_unknown | :network_3gpp2 | :network_3gpp
 
-  @type service_system_indication() :: %{
-          name: :service_system_indication,
+  @type serving_system_indication() :: %{
+          name: :serving_system_indication,
           service_id: 0x03,
           indication_id: 0x0024,
           serving_system_registration_state: serving_system_registration_state(),
           serving_system_cs_attach_state: attach_state(),
           serving_system_ps_attach_state: attach_state(),
           serving_system_selected_network: network(),
-          serving_system_radio_interface: [radio_interface()]
+          serving_system_radio_interfaces: [radio_interface()]
         }
 
   @doc """
@@ -153,7 +153,7 @@ defmodule QMI.Codec.NetworkAccess do
   Parse an indication
   """
   @spec parse_indication(binary()) ::
-          {:ok, service_system_indication()} | {:error, :invalid_indication}
+          {:ok, serving_system_indication()} | {:error, :invalid_indication}
   def parse_indication(
         <<@serving_system_indication::16-little, size::16-little, tlvs::binary-size(size)>>
       ) do

@@ -28,7 +28,7 @@ defmodule QMI.Codec.NetworkAccessTest do
              {:ok, %{mcc: 221, mnc: 239}}
   end
 
-  test "some indication" do
+  test "parses serving system indication" do
     message = %{
       message:
         <<36, 0, 37, 0, 1, 6, 0, 1, 1, 1, 2, 1, 5, 17, 4, 0, 3, 3, 4, 5, 18, 5, 0, 54, 1, 154, 1,
@@ -38,7 +38,7 @@ defmodule QMI.Codec.NetworkAccessTest do
       type: :indication
     }
 
-    assert NetworkAccess.parse_indication(message.message) ==
+    assert QMI.Codec.Indication.parse(message) ==
              {:ok,
               %{
                 indication_id: 0x0024,
