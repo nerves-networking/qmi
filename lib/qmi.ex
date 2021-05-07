@@ -27,12 +27,9 @@ defmodule QMI do
   QMI.NetworkAccess.get_signal_strength(MyApp.QMI)
   ```
   """
+  use Supervisor
 
-  use GenServer
-
-  alias QMI.{Codec, Driver}
-
-  @type t() :: GenServer.server()
+  @type t() :: atom()
 
   @typedoc """
   Structure that contains information about how to handle a QMI service message
@@ -59,6 +56,9 @@ defmodule QMI do
 
   @doc """
   Configure the framing when using linux
+
+  This should be called once the device appears and before an attempt is made to
+  connect to the network.
   """
   @spec configure_linux(String.t()) :: :ok
   def configure_linux(ifname) do
@@ -70,13 +70,16 @@ defmodule QMI do
 
   @doc """
   Start the server
+
+  The `:name` option is required and will be the QMI supervisor process. Pass
+  this name to all functions that have a `qmi` parameter.
   """
-  @spec start_link(options()) :: GenServer.on_start()
+  @spec start_link(options()) :: Supervisor.on_start()
   def start_link(options) do
     real_options = derive_options(options)
+    name = Keyword.fetch!(real_options, :name)
 
-    gen_server_options = Keyword.take(real_options, [:name])
-    GenServer.start_link(__MODULE__, real_options, gen_server_options)
+    Supervisor.start_link(__MODULE__, real_options, name: name)
   end
 
   @doc """
@@ -84,36 +87,21 @@ defmodule QMI do
 
   NOTE: the server parameter is second to facilitate piping
   """
-  @spec call(request(), GenServer.server()) :: :ok | {:ok, any()} | {:error, atom()}
-  def call(request, server) do
-    get_call_function(server, request.service_id).(request)
-  end
-
-  # Helper function for getting everything that's needed to run the "call" in
-  # the process context calling `call/2`.
-  defp get_call_function(server, service_id) do
-    GenServer.call(server, {:get_call_function, service_id})
-  end
-
-  @impl GenServer
-  def init(init_args) do
-    {:ok, driver} = Driver.start_link(init_args)
-
-    {:ok, %{driver: driver, client_ids: %{}}}
-  end
-
-  @impl GenServer
-  def handle_call({:get_call_function, service_id}, _from, state) do
-    case state.client_ids[service_id] do
-      nil ->
-        request = Codec.Control.get_client_id(service_id)
-        {:ok, client_id} = Driver.call(state.driver, 0, request)
-        new_state = %{state | client_ids: Map.put(state.client_ids, service_id, client_id)}
-        {:reply, fn request -> Driver.call(state.driver, client_id, request) end, new_state}
-
-      client_id ->
-        {:reply, fn request -> Driver.call(state.driver, client_id, request) end, state}
+  @spec call(request(), t()) :: :ok | {:ok, any()} | {:error, atom()}
+  def call(request, qmi) do
+    with {:ok, client_id} <- QMI.ClientIDCache.get_client_id(qmi, request.service_id) do
+      QMI.Driver.call(qmi, client_id, request)
     end
+  end
+
+  @impl Supervisor
+  def init(init_args) do
+    children = [
+      {QMI.ClientIDCache, init_args},
+      {QMI.Driver, init_args}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
   end
 
   defp derive_options(options) do

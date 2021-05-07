@@ -9,7 +9,6 @@ defmodule QMI.Driver do
     @moduledoc false
 
     defstruct bridge: nil,
-              caller: nil,
               device_path: nil,
               ref: nil,
               transactions: %{},
@@ -20,23 +19,28 @@ defmodule QMI.Driver do
   @request_flags 0
   @request_type 0
 
-  @type options() :: [device_path: Path.t(), caller: pid()]
+  @type options() :: [name: module(), device_path: Path.t()]
 
   @spec start_link(options) :: GenServer.on_start()
-  def start_link(options) do
-    new_options = Keyword.put_new(options, :caller, self())
-    GenServer.start_link(__MODULE__, new_options)
+  def start_link(init_args) do
+    qmi = Keyword.fetch!(init_args, :name)
+
+    GenServer.start_link(__MODULE__, init_args, name: name(qmi))
+  end
+
+  defp name(qmi) do
+    Module.concat(qmi, Driver)
   end
 
   @doc """
   Send a message and return the response
   """
   @spec call(GenServer.server(), non_neg_integer(), QMI.request(), keyword()) ::
-          {:ok, any()} | {:error, atom()}
-  def call(server, client_id, request, opts \\ []) do
+          :ok | {:ok, any()} | {:error, atom()}
+  def call(qmi, client_id, request, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, 5_000)
 
-    GenServer.call(server, {:call, client_id, request, timeout}, timeout * 2)
+    GenServer.call(name(qmi), {:call, client_id, request, timeout}, timeout * 2)
   end
 
   @impl GenServer
