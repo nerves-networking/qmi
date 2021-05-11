@@ -1,30 +1,40 @@
 # QMI
 
+[![Hex version](https://img.shields.io/hexpm/v/qmi.svg "Hex version")](https://hex.pm/packages/qmi)
+[![API docs](https://img.shields.io/hexpm/v/qmi.svg?label=hexdocs "API docs")](https://hexdocs.pm/qmi/QMI.html)
+[![CircleCI](https://circleci.com/gh/smartrent/qmi.svg?style=svg)](https://circleci.com/gh/smartrent/qmi)
+
 Qualcomm MSM Interface in Elixir
+
+This library lets you send and receive messages from a QMI-enabled cellular
+modem. It is intended for use with `vintage_net_qmi` and most users will
+want to use `VintageNet` to configure a cellular modem than to use this
+library directly.
 
 ## Usage
 
-```
-iex> QMI.configure_linux("wwan0")
-iex> {:ok, qmi} = QMI.start_link(ifname: "wwan0")
-iex> QMI.WirelessData.start_network_interface(qmi, apn: "super")
+First, start a `QMI.Supervisor` in the supervision tree of your choosing
+and pass it a name and interface. After that, use the service modules to send
+it messages. For example:
+
+```elixir
+# In your application's supervision tree
+children = [
+  #... other children ...
+  {QMI.Supervisor, ifname: "wwan0", name: MyApp.QMI}
+  #... other children ...
+]
+
+# Later on
+iex> QMI.WirelessData.start_network_interface(MyApp.QMI, apn: "super")
 :ok
-iex> QMI.NetworkAccess.get_signal_strength(qmi)
+
+iex> QMI.NetworkAccess.get_signal_strength(MyApp.QMI)
 {:ok, %{rssi_reports: [%{radio: :lte, rssi: -74}]}}
 ```
 
 If you are using Linux you will need to call `QMI.configure_linux/1` before
 bring the interface up.
-
-## Install
-
-```elixir
-def deps do
-  [
-    {:qmi, "~> 0.3.1"}
-  ]
-end
-```
 
 ## License
 

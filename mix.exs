@@ -63,11 +63,13 @@ defmodule QMI.MixProject do
       groups_for_modules: [
         Services: [
           QMI.Control,
+          QMI.DeviceManagement,
           QMI.NetworkAccess,
           QMI.WirelessData
         ],
         Codec: [
           QMI.Codec.Control,
+          QMI.Codec.DeviceManagement,
           QMI.Codec.NetworkAccess,
           QMI.Codec.WirelessData
         ]

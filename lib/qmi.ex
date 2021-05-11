@@ -1,30 +1,28 @@
 defmodule QMI do
   @moduledoc """
-  Send QMI messages to a QMI device
+  Qualcomm MSM Interface in Elixir
 
-  Example use:
+  This module lets you send and receive messages from a QMI-enabled cellular
+  modem.
 
-  ```elixir
-  iex> {:ok, qmi} = QMI.start_link(ifname: "wwan0")
-  iex> QMI.WirelessData.start_network_interface(qmi, apn: "super")
-  :ok
-  iex> QMI.NetworkAccess.get_signal_strength(qmi)
-  {:ok, %{rssi_reports: [%{radio: :lte, rssi: -74}]}}
-  ```
-
-  Starting QMI in a supervision tree
+  To use it, start a `QMI.Supervisor` in the supervision tree of your choosing
+  and pass it a name and interface. After that, use the service modules to send
+  it messages. For example:
 
   ```elixir
-
+  # In your application's supervision tree
   children = [
     #... other children ...
     {QMI.Supervisor, ifname: "wwan0", name: MyApp.QMI}
     #... other children ...
   ]
 
-  # Later in your app
+  # Later on
+  iex> QMI.WirelessData.start_network_interface(MyApp.QMI, apn: "super")
+  :ok
 
-  QMI.NetworkAccess.get_signal_strength(MyApp.QMI)
+  iex> QMI.NetworkAccess.get_signal_strength(MyApp.QMI)
+  {:ok, %{rssi_reports: [%{radio: :lte, rssi: -74}]}}
   ```
   """
 
