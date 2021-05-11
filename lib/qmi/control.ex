@@ -7,7 +7,8 @@ defmodule QMI.Control do
   @doc """
   Get a client id for a service
   """
-  @spec get_client_id(QMI.t(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, atom()}
+  @spec get_client_id(QMI.name(), non_neg_integer()) ::
+          {:ok, non_neg_integer()} | {:error, atom()}
   def get_client_id(qmi, service_id) do
     Codec.Control.get_client_id(service_id)
     |> QMI.call(qmi)
@@ -16,7 +17,8 @@ defmodule QMI.Control do
   @doc """
   Release a client id for a service
   """
-  @spec release_client_id(QMI.t(), non_neg_integer(), non_neg_integer()) :: :ok | {:error, atom()}
+  @spec release_client_id(QMI.name(), non_neg_integer(), non_neg_integer()) ::
+          :ok | {:error, atom()}
   def release_client_id(qmi, service_id, client_id) do
     Codec.Control.release_client_id(service_id, client_id)
     |> QMI.call(qmi)

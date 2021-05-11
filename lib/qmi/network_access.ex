@@ -7,7 +7,7 @@ defmodule QMI.NetworkAccess do
   @doc """
   Get the current signal strength
   """
-  @spec get_signal_strength(QMI.t()) ::
+  @spec get_signal_strength(QMI.name()) ::
           {:ok, Codec.NetworkAccess.signal_strength_report()} | {:error, atom()}
   def get_signal_strength(qmi) do
     Codec.NetworkAccess.get_signal_strength()
@@ -19,7 +19,7 @@ defmodule QMI.NetworkAccess do
 
   This returns the MCC and MNC of the device.
   """
-  @spec get_home_network(QMI.t()) ::
+  @spec get_home_network(QMI.name()) ::
           {:ok, Codec.NetworkAccess.home_network_report()} | {:error, atom()}
   def get_home_network(qmi) do
     Codec.NetworkAccess.get_home_network()

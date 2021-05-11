@@ -12,7 +12,7 @@ defmodule QMI.WirelessData do
   can perform IP address configuration. That means once this returns you can
   configure the interface via DHCP.
   """
-  @spec start_network_interface(QMI.t(), [
+  @spec start_network_interface(QMI.name(), [
           Codec.WirelessData.start_network_interface_opt()
         ]) :: {:ok, Codec.WirelessData.start_network_report()} | {:error, atom()}
   def start_network_interface(qmi, opts \\ []) do

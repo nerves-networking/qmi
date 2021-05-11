@@ -8,7 +8,7 @@ defmodule QMI.DeviceManagement do
   @doc """
   Get the firmware information
   """
-  @spec get_firmware_rev(QMI.t()) :: {:ok, map()} | {:error, any()}
+  @spec get_firmware_rev(QMI.name()) :: {:ok, map()} | {:error, any()}
   def get_firmware_rev(qmi) do
     Codec.DeviceManagement.get_device_rev_id()
     |> QMI.call(qmi)
