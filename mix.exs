@@ -37,7 +37,7 @@ defmodule QMI.MixProject do
   end
 
   defp description do
-    "QMI!"
+    "Qualcomm MSM Interface in Elixir"
   end
 
   defp deps do

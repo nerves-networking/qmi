@@ -2,8 +2,6 @@
 
 Qualcomm MSM Interface in Elixir
 
-Primarily referenced from [Telit LM940 QMI Command Reference Guide](assets/telit_qmi_guide.pdf) and the [`libqmi` source](https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/tree/master)
-
 ## Usage
 
 ```
