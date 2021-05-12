@@ -1,5 +1,7 @@
-defmodule DevBridgeTest do
+defmodule QMI.DevBridgeTest do
   use ExUnit.Case
+
+  alias QMI.DevBridge
   doctest DevBridge
 
   @pipe_filename "test_pipe"

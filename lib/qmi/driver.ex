@@ -3,6 +3,8 @@ defmodule QMI.Driver do
 
   use GenServer
 
+  alias QMI.DevBridge
+
   require Logger
 
   defmodule State do

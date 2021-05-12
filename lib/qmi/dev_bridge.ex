@@ -1,4 +1,4 @@
-defmodule DevBridge do
+defmodule QMI.DevBridge do
   @moduledoc false
 
   # Interact with special files in `/dev` without messing up the BEAM*
