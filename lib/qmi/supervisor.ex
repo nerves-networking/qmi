@@ -12,8 +12,15 @@ defmodule QMI.Supervisor do
   * `:device_path` - the path to the QMI control device. Defaults to `"/dev/cdc-wdm<index>"`
   where `index` matches the `ifname` index.
   * `:name` - an optional name for this GenServer
+  * `:indication_callback` - a function that is ran when an indication is
+  received from QMI.
   """
-  @type options() :: [ifname: String.t(), device_path: Path.t(), name: atom()]
+  @type options() :: [
+          ifname: String.t(),
+          device_path: Path.t(),
+          name: atom(),
+          indication_callback: QMI.indication_callback_fun()
+        ]
 
   @doc """
   Start the supervisor
