@@ -15,13 +15,18 @@ defmodule QMI.Driver do
               ref: nil,
               transactions: %{},
               last_ctl_transaction: 0,
-              last_service_transaction: 256
+              last_service_transaction: 256,
+              indication_callback: nil
   end
 
   @request_flags 0
   @request_type 0
 
-  @type options() :: [name: module(), device_path: Path.t()]
+  @type options() :: [
+          name: module(),
+          device_path: Path.t(),
+          indication_callback: QMI.indication_callback_fun()
+        ]
 
   @spec start_link(options) :: GenServer.on_start()
   def start_link(init_args) do
@@ -140,10 +145,18 @@ defmodule QMI.Driver do
     {tran, %{state | last_service_transaction: tran}}
   end
 
+  defp run_callback_fun(_indication, %{indication_callback: nil}) do
+    :ok
+  end
+
+  defp run_callback_fun(indication, %{indication_callback: callback_fun}) do
+    callback_fun.(indication)
+  end
+
   defp handle_report(%{type: :indication} = msg, state) do
     case QMI.Codec.Indication.parse(msg) do
-      {:ok, info} ->
-        Logger.warn("QMI: Ignoring indication: #{inspect(info, limit: :infinity)}")
+      {:ok, indication} ->
+        :ok = run_callback_fun(indication, state)
 
       {:error, _} ->
         Logger.warn("QMI: Unknown indication: #{inspect(msg, limit: :infinity)}")

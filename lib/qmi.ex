@@ -44,6 +44,13 @@ defmodule QMI do
           decode: (binary() -> {:ok, any()} | {:error, atom()})
         }
 
+  @typedoc """
+  A function that is ran when QMI receives an indication
+
+  This function receives a map as the indication and returns `:ok`.
+  """
+  @type indication_callback_fun() :: (map() -> :ok)
+
   @doc """
   Configure the framing when using linux
 
