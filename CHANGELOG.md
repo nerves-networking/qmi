@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.0
+
+* Improvements
+  * Add support for QMI indications
+
 ## v0.4.0
 
 * Changes
