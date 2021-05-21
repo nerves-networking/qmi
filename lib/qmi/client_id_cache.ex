@@ -30,7 +30,7 @@ defmodule QMI.ClientIDCache do
       nil ->
         request = QMI.Codec.Control.get_client_id(service_id)
 
-        case QMI.Driver.call(qmi, 0, request) do
+        case QMI.Driver.call(qmi, 0, request, timeout: 4_000) do
           {:ok, client_id} ->
             new_state = Map.put(state, service_id, client_id)
             {:reply, {:ok, client_id}, new_state}
