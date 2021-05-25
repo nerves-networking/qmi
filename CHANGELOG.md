@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.1
+
+* Improvements
+  * Add `QMI.UserIdentity.read_transparent/3`
+  * Add `QMI.UserIdentity.parse_iccid/1`
+  * Better error reasons returned from sending a request
+
+* Fixes
+  * Timeout crash when requesting a new client id
+
 ## v0.5.0
 
 * Improvements
