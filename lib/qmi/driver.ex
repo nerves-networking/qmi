@@ -182,7 +182,7 @@ defmodule QMI.Driver do
     {:noreply, %{state | transactions: transactions}}
   end
 
-  defp handle_report(%{transaction_id: transaction_id, code: error}, state) do
+  defp handle_report(%{transaction_id: transaction_id, code: :failure, error: error}, state) do
     {:noreply, fail_transaction_id(state, transaction_id, error)}
   end
 
