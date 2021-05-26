@@ -2,7 +2,7 @@ defmodule QMI.MixProject do
   use Mix.Project
 
   @version "0.5.1"
-  @source_url "https://github.com/smartrent/qmi"
+  @source_url "https://github.com/nerves-networking/qmi"
 
   def project do
     [
@@ -89,8 +89,7 @@ defmodule QMI.MixProject do
         "Makefile"
       ],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => @source_url},
-      organization: "smartrent"
+      links: %{"GitHub" => @source_url}
     ]
   end
 end
