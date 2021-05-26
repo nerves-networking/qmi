@@ -1,7 +1,7 @@
 defmodule QMI.Codec.Indication do
-  @moduledoc """
-  Parse an indication from QMI
-  """
+  @moduledoc false
+
+  # Parser for indications
 
   @doc """
   Route the indication to the appropriate parser.
