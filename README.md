@@ -2,7 +2,7 @@
 
 [![Hex version](https://img.shields.io/hexpm/v/qmi.svg "Hex version")](https://hex.pm/packages/qmi)
 [![API docs](https://img.shields.io/hexpm/v/qmi.svg?label=hexdocs "API docs")](https://hexdocs.pm/qmi/QMI.html)
-[![CircleCI](https://circleci.com/gh/smartrent/qmi.svg?style=svg)](https://circleci.com/gh/smartrent/qmi)
+[![CircleCI](https://circleci.com/gh/nerves-networking/qmi.svg?style=svg)](https://circleci.com/gh/nerves-networking/qmi)
 
 Qualcomm MSM Interface in Elixir
 
