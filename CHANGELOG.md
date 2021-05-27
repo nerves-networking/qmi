@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.0
+
+* Updates
+  * Changes `QMI.Codec.Indications` to be an internal module
+
 ## v0.5.1
 
 * Improvements
