@@ -172,9 +172,7 @@ defmodule QMI.Driver do
 
     if match?({:error, _reason}, result) do
       Logger.warn(
-        "QMI: Error decoding response to #{inspect(request)}: message was #{
-          inspect(msg.message, limit: :infinity)
-        }"
+        "QMI: Error decoding response to #{inspect(request)}: message was #{inspect(msg.message, limit: :infinity)}"
       )
     end
 
