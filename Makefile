@@ -51,9 +51,11 @@ all: install
 install: $(BUILD) $(DEFAULT_TARGETS)
 
 $(BUILD)/%.o: src/%.c
+	@echo " CC $(notdir $@)"
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 $(PREFIX)/dev_bridge: $(BUILD)/dev_bridge.o $(BUILD)/eframer.o
+	@echo " LD $(notdir $@)"
 	$(CC) $^ $(LDFLAGS) -o $@
 	$(call update_perms, $@)
 
@@ -64,3 +66,6 @@ clean:
 	$(RM) $(PREFIX)/dev_bridge $(BUILD)/*.o
 
 .PHONY: all clean calling_from_make install
+
+# Don't echo commands unless the caller exports "V=1"
+${V}.SILENT:
