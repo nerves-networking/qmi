@@ -15,7 +15,7 @@ defmodule QMI.MixProject do
       start_permanent: Mix.env() == :prod,
       compilers: [:elixir_make | Mix.compilers()],
       make_targets: ["all"],
-      make_clean: ["clean"],
+      make_clean: ["mix_clean"],
       deps: deps(),
       dialyzer: [
         flags: [:unmatched_returns, :error_handling, :race_conditions, :underspecs]
