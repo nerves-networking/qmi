@@ -62,10 +62,13 @@ $(PREFIX)/dev_bridge: $(BUILD)/dev_bridge.o $(BUILD)/eframer.o
 $(PREFIX) $(BUILD):
 	mkdir -p $@
 
-clean:
+mix_clean:
 	$(RM) $(PREFIX)/dev_bridge $(BUILD)/*.o
 
-.PHONY: all clean calling_from_make install
+clean:
+	mix clean
+
+.PHONY: all clean mix_clean calling_from_make install
 
 # Don't echo commands unless the caller exports "V=1"
 ${V}.SILENT:
