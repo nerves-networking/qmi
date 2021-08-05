@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.1
+
+* Enhancements
+  * Build and code cleanup
+
+* Fixes
+  * A crash when a response is received after the request has timed out
+
 ## v0.6.0
 
 * Updates
