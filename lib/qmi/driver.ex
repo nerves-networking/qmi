@@ -166,17 +166,25 @@ defmodule QMI.Driver do
   end
 
   defp handle_report(%{transaction_id: transaction_id, code: :success} = msg, state) do
-    {{from, request, timer}, transactions} = Map.pop(state.transactions, transaction_id)
-    _ = Process.cancel_timer(timer)
-    result = msg.message |> request.decode.()
+    {transaction, transactions} = Map.pop(state.transactions, transaction_id)
 
-    if match?({:error, _reason}, result) do
-      Logger.warn(
-        "QMI: Error decoding response to #{inspect(request)}: message was #{inspect(msg.message, limit: :infinity)}"
-      )
+    case transaction do
+      {from, request, timer} ->
+        _ = Process.cancel_timer(timer)
+        result = msg.message |> request.decode.()
+
+        if match?({:error, _reason}, result) do
+          Logger.warn(
+            "QMI: Error decoding response to #{inspect(request)}: message was #{inspect(msg.message, limit: :infinity)}"
+          )
+        end
+
+        GenServer.reply(from, result)
+
+      nil ->
+        Logger.warn("QMI: Ignoring response for unknown transaction: #{inspect(transaction_id)}")
     end
 
-    GenServer.reply(from, result)
     {:noreply, %{state | transactions: transactions}}
   end
 
