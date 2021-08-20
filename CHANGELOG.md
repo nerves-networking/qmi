@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.2
+
+* Added
+  * `QMI.DeviceManagement.get_manufacturer/1`
+  * `QMI.DeviceManagement.get_model/1`
+  * `QMI.DeviceManagement.get_hardware_rev/1`
+
 ## v0.6.1
 
 * Enhancements
