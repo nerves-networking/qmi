@@ -6,6 +6,19 @@ defmodule QMI.Codec.DeviceManagement do
   @get_device_mfr 0x0021
   @get_device_model_id 0x0022
   @get_device_rev_id 0x0023
+  @get_device_hardware_rev 0x002C
+
+  @doc """
+  Get the device hardware revision
+  """
+  @spec get_device_hardware_rev() :: QMI.request()
+  def get_device_hardware_rev() do
+    %{
+      service_id: 0x02,
+      payload: [<<@get_device_hardware_rev::16-little, 0, 0>>],
+      decode: &parse_get_device_hardware_rev/1
+    }
+  end
 
   @doc """
   Get the device manufacturer
@@ -41,6 +54,13 @@ defmodule QMI.Codec.DeviceManagement do
       payload: [<<0x23::16-little, 0x00, 0x00>>],
       decode: &parse_get_device_rev_id/1
     }
+  end
+
+  defp parse_get_device_hardware_rev(
+         <<@get_device_hardware_rev::16-little, _size::16-little, _result_tlv::7*8, 1,
+           len::16-little, hardware_rev::size(len)-binary>>
+       ) do
+    {:ok, hardware_rev}
   end
 
   defp parse_get_device_mfr(

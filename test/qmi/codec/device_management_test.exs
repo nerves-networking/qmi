@@ -43,4 +43,15 @@ defmodule QMI.Codec.DeviceManagementTest do
 
     assert request.decode.(response_bin) == {:ok, "QUECTEL Mobile Broadband Module"}
   end
+
+  test "get_device_hardware_rev/0" do
+    request = DeviceManagement.get_device_hardware_rev()
+
+    assert IO.iodata_to_binary(request.payload) == <<44, 0, 0, 0>>
+    assert request.service_id == 0x02
+
+    response_bin = <<44, 0, 40, 0, 2, 4, 0, 0, 0, 0, 0, 1, 5, 0, 49, 48, 48, 48, 48>>
+
+    assert request.decode.(response_bin) == {:ok, "10000"}
+  end
 end
