@@ -29,4 +29,18 @@ defmodule QMI.Codec.DeviceManagementTest do
 
     assert request.decode.(response_bin) == {:ok, "QUALCOMM INCORPORATED"}
   end
+
+  test "get_device_model_id/0" do
+    request = DeviceManagement.get_device_model_id()
+
+    assert IO.iodata_to_binary(request.payload) == <<34, 0, 0, 0>>
+    assert request.service_id == 0x02
+
+    response_bin =
+      <<34, 0, 40, 0, 2, 4, 0, 0, 0, 0, 0, 1, 31, 0, 81, 85, 69, 67, 84, 69, 76, 32, 77, 111, 98,
+        105, 108, 101, 32, 66, 114, 111, 97, 100, 98, 97, 110, 100, 32, 77, 111, 100, 117, 108,
+        101>>
+
+    assert request.decode.(response_bin) == {:ok, "QUECTEL Mobile Broadband Module"}
+  end
 end

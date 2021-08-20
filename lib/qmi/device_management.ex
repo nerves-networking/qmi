@@ -22,4 +22,13 @@ defmodule QMI.DeviceManagement do
     Codec.DeviceManagement.get_device_mfr()
     |> QMI.call(qmi)
   end
+
+  @doc """
+  Get the device model information
+  """
+  @spec get_model(QMI.name()) :: {:ok, binary()} | {:error, any()}
+  def get_model(qmi) do
+    Codec.DeviceManagement.get_device_model_id()
+    |> QMI.call(qmi)
+  end
 end
