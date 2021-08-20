@@ -6,6 +6,15 @@ defmodule QMI.DeviceManagement do
   alias QMI.Codec
 
   @doc """
+  Get the hardware information
+  """
+  @spec get_hardware_rev(QMI.name()) :: {:ok, map()} | {:error, any()}
+  def get_hardware_rev(qmi) do
+    Codec.DeviceManagement.get_device_hardware_rev()
+    |> QMI.call(qmi)
+  end
+
+  @doc """
   Get the firmware information
   """
   @spec get_firmware_rev(QMI.name()) :: {:ok, map()} | {:error, any()}
