@@ -4,6 +4,7 @@ defmodule QMI.Codec.DeviceManagement do
   """
 
   @get_device_mfr 0x0021
+  @get_device_model_id 0x0022
   @get_device_rev_id 0x0023
 
   @doc """
@@ -15,6 +16,18 @@ defmodule QMI.Codec.DeviceManagement do
       service_id: 0x02,
       payload: [<<@get_device_mfr::16-little, 0, 0>>],
       decode: &parse_get_device_mfr/1
+    }
+  end
+
+  @doc """
+  Get the device model
+  """
+  @spec get_device_model_id() :: QMI.request()
+  def get_device_model_id() do
+    %{
+      service_id: 0x02,
+      payload: [<<@get_device_model_id::16-little, 0, 0>>],
+      decode: &parse_get_device_model_id/1
     }
   end
 
@@ -35,6 +48,13 @@ defmodule QMI.Codec.DeviceManagement do
            mfr::size(len)-binary>>
        ) do
     {:ok, mfr}
+  end
+
+  defp parse_get_device_model_id(
+         <<@get_device_model_id::16-little, _size::16-little, _result_tlv::7*8, 1, len::16-little,
+           model::size(len)-binary>>
+       ) do
+    {:ok, model}
   end
 
   defp parse_get_device_rev_id(<<@get_device_rev_id::16-little, _size::16-little, tlvs::binary>>) do
