@@ -42,6 +42,7 @@ defmodule QMI.Codec.WirelessData do
   The indication for a change in the current packet data connection status
   """
   @type packet_status_indication() :: %{
+          name: :packet_status_indication,
           status: :disconnected | :connected | :suspended | :authenticating,
           reconfiguration_required: boolean(),
           call_end_reason: integer() | nil,
@@ -123,6 +124,7 @@ defmodule QMI.Codec.WirelessData do
 
   defp packet_status_indication_init() do
     %{
+      name: :packet_status_indication,
       status: nil,
       reconfiguration_required: nil,
       call_end_reason: nil,
