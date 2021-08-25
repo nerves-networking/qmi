@@ -54,4 +54,46 @@ defmodule QMI.Codec.DeviceManagementTest do
 
     assert request.decode.(response_bin) == {:ok, "10000"}
   end
+
+  describe "get_device_serial_numbers/0" do
+    test "ESN serial number" do
+      request = DeviceManagement.get_device_serial_numbers()
+
+      response_bin = <<0x0025::16-little, 0x05::16-little, 0x10, 0x02, 0x00, 0x01, 0x02>>
+
+      {:ok, serial_numbers} = request.decode.(response_bin)
+
+      assert serial_numbers.esn == <<0x01, 0x02>>
+    end
+
+    test "IMEI serial number" do
+      request = DeviceManagement.get_device_serial_numbers()
+
+      response_bin = <<0x0025::16-little, 0x05::16-little, 0x11, 0x02, 0x00, 0x01, 0x02>>
+
+      {:ok, serial_numbers} = request.decode.(response_bin)
+
+      assert serial_numbers.imei == <<0x01, 0x02>>
+    end
+
+    test "MEID serial number" do
+      request = DeviceManagement.get_device_serial_numbers()
+
+      response_bin = <<0x0025::16-little, 0x05::16-little, 0x12, 0x02, 0x00, 0x01, 0x02>>
+
+      {:ok, serial_numbers} = request.decode.(response_bin)
+
+      assert serial_numbers.meid == <<0x01, 0x02>>
+    end
+
+    test "IMEI version" do
+      request = DeviceManagement.get_device_serial_numbers()
+
+      response_bin = <<0x0025::16-little, 0x04::16-little, 0x13, 0x01, 0x00, 0x01>>
+
+      {:ok, serial_numbers} = request.decode.(response_bin)
+
+      assert serial_numbers.imeisv_svn == <<0x01>>
+    end
+  end
 end

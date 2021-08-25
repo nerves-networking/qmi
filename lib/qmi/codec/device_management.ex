@@ -6,7 +6,23 @@ defmodule QMI.Codec.DeviceManagement do
   @get_device_mfr 0x0021
   @get_device_model_id 0x0022
   @get_device_rev_id 0x0023
+  @get_device_serial_numbers 0x0025
   @get_device_hardware_rev 0x002C
+
+  @typedoc """
+  The serial numbers assigned to the device
+
+    * `esn` - for 3GPP2 devices
+    * `imei` - for 3GPP devices
+    * `meid` - for 3GPP and 3GPP2 devices
+    * `imeisv_svn` - for 3GPP devices
+  """
+  @type serial_numbers() :: %{
+          esn: binary() | nil,
+          imei: binary() | nil,
+          meid: binary() | nil,
+          imeisv_svn: binary() | nil
+        }
 
   @doc """
   Get the device hardware revision
@@ -93,5 +109,75 @@ defmodule QMI.Codec.DeviceManagement do
 
   defp parse_firmware_rev_id(<<_type, size::16-little, _values::size(size)-binary, rest::binary>>) do
     parse_firmware_rev_id(rest)
+  end
+
+  @doc """
+  Request for the serial numbers of the device
+  """
+  @spec get_device_serial_numbers() :: QMI.request()
+  def get_device_serial_numbers() do
+    %{
+      service_id: 0x02,
+      payload: [<<@get_device_serial_numbers::16-little>>, 0x00, 0x00],
+      decode: &parse_device_serial_numbers/1
+    }
+  end
+
+  defp parse_device_serial_numbers(
+         <<@get_device_serial_numbers::16-little, _size::16-little, tlvs::binary>>
+       ) do
+    serial_numbers = %{
+      esn: nil,
+      imei: nil,
+      meid: nil,
+      imeisv_svn: nil
+    }
+
+    parse_device_serial_numbers(serial_numbers, tlvs)
+  end
+
+  defp parse_device_serial_numbers(serial_numbers, <<>>), do: {:ok, serial_numbers}
+
+  defp parse_device_serial_numbers(
+         serial_numbers,
+         <<0x10, length::16-little, esn::binary-size(length), rest::binary>>
+       ) do
+    serial_numbers
+    |> Map.put(:esn, esn)
+    |> parse_device_serial_numbers(rest)
+  end
+
+  defp parse_device_serial_numbers(
+         serial_numbers,
+         <<0x11, length::16-little, imei::binary-size(length), rest::binary>>
+       ) do
+    serial_numbers
+    |> Map.put(:imei, imei)
+    |> parse_device_serial_numbers(rest)
+  end
+
+  defp parse_device_serial_numbers(
+         serial_numbers,
+         <<0x12, length::16-little, meid::binary-size(length), rest::binary>>
+       ) do
+    serial_numbers
+    |> Map.put(:meid, meid)
+    |> parse_device_serial_numbers(rest)
+  end
+
+  defp parse_device_serial_numbers(
+         serial_numbers,
+         <<0x13, length::16-little, imeisv_svn::binary-size(length), rest::binary>>
+       ) do
+    serial_numbers
+    |> Map.put(:imeisv_svn, imeisv_svn)
+    |> parse_device_serial_numbers(rest)
+  end
+
+  defp parse_device_serial_numbers(
+         serial_numbers,
+         <<_type, length::16-little, _values::binary-size(length), rest::binary>>
+       ) do
+    parse_device_serial_numbers(serial_numbers, rest)
   end
 end
