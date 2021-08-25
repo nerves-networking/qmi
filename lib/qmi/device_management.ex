@@ -40,4 +40,14 @@ defmodule QMI.DeviceManagement do
     Codec.DeviceManagement.get_device_model_id()
     |> QMI.call(qmi)
   end
+
+  @doc """
+  Get the device serial numbers
+  """
+  @spec get_serial_numbers(QMI.name()) ::
+          {:ok, Codec.DeviceManagement.serial_numbers()} | {:error, any()}
+  def get_serial_numbers(qmi) do
+    Codec.DeviceManagement.get_device_serial_numbers()
+    |> QMI.call(qmi)
+  end
 end
