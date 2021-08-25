@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.3 - 2021-08-25
+
+### Added
+
+- `QMI.DeviceManagement.get_device_serial_numbers/1`
+- Support for Wireless Data Service packet status indication
+
 ## v0.6.2
 
 * Added
