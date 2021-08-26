@@ -1,72 +1,88 @@
+<!-- markdownlint-disable-file MD024 -->
 # Changelog
 
-## v0.6.3 - 2021-08-25
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [v0.6.3] - 2021-08-25
 
 ### Added
 
-- `QMI.DeviceManagement.get_device_serial_numbers/1`
-- Support for Wireless Data Service packet status indication
+* `QMI.DeviceManagement.get_device_serial_numbers/1`
+* Support for Wireless Data Service packet status indication
 
-## v0.6.2
+## [v0.6.2] - 2021-08-20
 
-* Added
-  * `QMI.DeviceManagement.get_manufacturer/1`
-  * `QMI.DeviceManagement.get_model/1`
-  * `QMI.DeviceManagement.get_hardware_rev/1`
+### Added
 
-## v0.6.1
+* `QMI.DeviceManagement.get_manufacturer/1`
+* `QMI.DeviceManagement.get_model/1`
+* `QMI.DeviceManagement.get_hardware_rev/1`
 
-* Enhancements
-  * Build and code cleanup
+## [v0.6.1] - 2021-08-05
 
-* Fixes
-  * A crash when a response is received after the request has timed out
+### Fixes
 
-## v0.6.0
+* A crash when a response is received after the request has timed out
 
-* Updates
-  * Changes `QMI.Codec.Indications` to be an internal module
+## [v0.6.0] - 2021-05-27
 
-## v0.5.1
+### Changed
 
-* Improvements
-  * Add `QMI.UserIdentity.read_transparent/3`
-  * Add `QMI.UserIdentity.parse_iccid/1`
-  * Better error reasons returned from sending a request
+* `QMI.Codec.Indications` to be an internal module
 
-* Fixes
-  * Timeout crash when requesting a new client id
+## [v0.5.1] - 2021-05-25
 
-## v0.5.0
+### Added
 
-* Improvements
-  * Add support for QMI indications
+* `QMI.UserIdentity.read_transparent/3`
+* `QMI.UserIdentity.parse_iccid/1`
+* Error reasons returned from sending a request
 
-## v0.4.0
+### Fixes
 
-* Changes
-  * Change supervision tree to support driver crashes (backwards incompatible)
+* Timeout crash when requesting a new client id
 
-## v0.3.1
+## [v0.5.0] - 2021-05-14
 
-* Fixes
-  * Fix type spec for `QMI.Codec.NetworkAccess.home_network_report()`
-  * Fix error when the device closes and QMI retries to open the device
+### Added
 
-## v0.3.0
+* Support for QMI indications
 
-* Improvements
-  * Clean up unused code
-  * Add and update docs
+## [v0.4.0] - 2021-05-10
 
-* Changes
-  * Change `:rssis` to `:rssi_reports` in the
-   `QMI.Codec.NetworkAccess.signal_strength_report()`
+### Changes
 
-## v0.2.0
+* Supervision tree to support driver crashes (backwards incompatible)
+
+## [v0.3.1] - 2021-04-27
+
+### Fixes
+
+* Type spec for `QMI.Codec.NetworkAccess.home_network_report()`
+* Error when the device closes and QMI retries to open the device
+
+## [v0.3.0] - 2021-04-26
+
+### Changes
+
+* Rename `:rssis` to `:rssi_reports` in the
+ `QMI.Codec.NetworkAccess.signal_strength_report()`
+
+## [v0.2.0] - 2021-04-16
 
 Major refactor
 
-## v0.1.0
+## v0.1.0 - 2021-03-17
 
 Initial release
+
+[v0.6.3]: https://github.com/nerves-networking/qmi/compare/v0.6.2...v0.6.3
+[v0.6.2]: https://github.com/nerves-networking/qmi/compare/v0.6.1...v0.6.2
+[v0.6.1]: https://github.com/nerves-networking/qmi/compare/v0.6.0...v0.6.1
+[v0.6.0]: https://github.com/nerves-networking/qmi/compare/v0.5.0...v0.6.0
+[v0.5.1]: https://github.com/nerves-networking/qmi/compare/v0.5.0...v0.5.1
+[v0.5.0]: https://github.com/nerves-networking/qmi/compare/v0.4.0...v0.5.0
+[v0.4.0]: https://github.com/nerves-networking/qmi/compare/v0.3.1...v0.4.0
+[v0.3.1]: https://github.com/nerves-networking/qmi/compare/v0.3.0...v0.3.1
+[v0.3.0]: https://github.com/nerves-networking/qmi/compare/v0.2.0...v0.3.0
+[v0.2.0]: https://github.com/nerves-networking/qmi/compare/v0.1.0...v0.2.0
