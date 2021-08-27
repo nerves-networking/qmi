@@ -7,6 +7,10 @@ defmodule QMI.Codec.Indication do
   Route the indication to the appropriate parser.
   """
   @spec parse(QMI.Message.t()) :: {:ok, map()} | {:error, :invalid_indication}
+  def parse(%{service_id: 0} = message) do
+    QMI.Codec.Control.parse_indication(message.message)
+  end
+
   def parse(%{service_id: 1} = message) do
     QMI.Codec.WirelessData.parse_indication(message.message)
   end

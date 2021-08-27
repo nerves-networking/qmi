@@ -28,4 +28,10 @@ defmodule QMI.Codec.ControlTest do
              <<0x23::little-16, 0x05::little-16, 0x01, 0x02::little-16, 0x03, 0x04>>
            ) == :ok
   end
+
+  test "parse_indication/1 for sync indication" do
+    indication = <<0x27, 0x00, 0x00, 0x00>>
+
+    assert {:ok, %{name: :sync_indication}} = Control.parse_indication(indication)
+  end
 end

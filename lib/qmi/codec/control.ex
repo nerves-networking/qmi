@@ -5,6 +5,11 @@ defmodule QMI.Codec.Control do
 
   @get_client_id 0x0022
   @release_client_id 0x0023
+  @sync_indication 0x0027
+
+  @type sync_indication() :: %{
+          name: :sync_indication
+        }
 
   @doc """
   Request for getting a client id
@@ -82,4 +87,14 @@ defmodule QMI.Codec.Control do
        ) do
     parse_release_client_id_tlvs(rest)
   end
+
+  @doc """
+  Parse indications for the the control service
+  """
+  @spec parse_indication(binary()) :: {:ok, sync_indication()} | {:error, :invalid_indication}
+  def parse_indication(<<@sync_indication::little-16, 0x00, 0x00>>) do
+    {:ok, %{name: :sync_indication}}
+  end
+
+  def parse_indication(_binary), do: {:error, :invalid_indication}
 end
