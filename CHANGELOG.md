@@ -3,6 +3,12 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.4] - 2021-08-30
+
+### Added
+
+* `:provider` field to the `QMI.NetworkAccess.get_home_network/1` response
+
 ## [v0.6.3] - 2021-08-25
 
 ### Added
