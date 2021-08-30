@@ -26,7 +26,11 @@ defmodule QMI.Codec.NetworkAccess do
   @typedoc """
   Report from requesting the home network
   """
-  @type home_network_report() :: %{mcc: char(), mnc: char()}
+  @type home_network_report() :: %{
+          mcc: char(),
+          mnc: char(),
+          provider: binary()
+        }
 
   @type serving_system_registration_state() ::
           :not_registered | :registered | :registration_denied | :registration_unknown
@@ -134,11 +138,12 @@ defmodule QMI.Codec.NetworkAccess do
          parsed,
          <<0x01, size::little-16, values::size(size)-binary, rest::binary>>
        ) do
-    <<mcc::little-16, mnc::little-16, _description::binary>> = values
+    <<mcc::little-16, mnc::little-16, description::binary>> = values
 
     parsed
     |> Map.put(:mcc, mcc)
     |> Map.put(:mnc, mnc)
+    |> Map.put(:provider, extract_string(description))
     |> parse_get_home_network_tlvs(rest)
   end
 
@@ -148,6 +153,8 @@ defmodule QMI.Codec.NetworkAccess do
        ) do
     parse_get_home_network_tlvs(parsed, rest)
   end
+
+  defp extract_string(<<length, string::binary-size(length)>>), do: string
 
   @doc """
   Parse an indication
