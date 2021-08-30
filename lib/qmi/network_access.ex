@@ -17,7 +17,7 @@ defmodule QMI.NetworkAccess do
   @doc """
   Get the home network of the device
 
-  This returns the MCC and MNC of the device.
+  This returns the MCC, MNC, and service provider for the network.
   """
   @spec get_home_network(QMI.name()) ::
           {:ok, Codec.NetworkAccess.home_network_report()} | {:error, atom()}

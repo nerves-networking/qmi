@@ -15,17 +15,29 @@ defmodule QMI.Codec.NetworkAccessTest do
              {:ok, %{rssi_reports: [%{radio: :lte, rssi: -10}]}}
   end
 
-  test "get_home_network/0" do
-    request = NetworkAccess.get_home_network()
+  describe "get_home_network/0" do
+    test "when no service provider information" do
+      request = NetworkAccess.get_home_network()
 
-    assert IO.iodata_to_binary(request.payload) == <<37, 0, 0, 0>>
-    assert request.service_id == 0x03
+      assert IO.iodata_to_binary(request.payload) == <<37, 0, 0, 0>>
+      assert request.service_id == 0x03
 
-    assert request.decode.(
-             <<0x25::little-16, 0x07::little-16, 0x01, 0x04::little-16, 0xDD::little-16,
-               0xEF::little-16>>
-           ) ==
-             {:ok, %{mcc: 221, mnc: 239}}
+      assert request.decode.(
+               <<0x25::little-16, 0x08::little-16, 0x01, 0x05::little-16, 0xDD::little-16,
+                 0xEF::little-16, 0x00>>
+             ) ==
+               {:ok, %{mcc: 221, mnc: 239, provider: ""}}
+    end
+
+    test "when a service provider is given" do
+      request = NetworkAccess.get_home_network()
+
+      assert request.decode.(
+               <<0x25::little-16, 0x0D::little-16, 0x01, 0x0A::little-16, 0xDD::little-16,
+                 0xEF::little-16, 0x05, "hello"::binary>>
+             ) ==
+               {:ok, %{mcc: 221, mnc: 239, provider: "hello"}}
+    end
   end
 
   test "parses serving system indication" do
