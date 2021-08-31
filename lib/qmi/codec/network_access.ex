@@ -47,7 +47,8 @@ defmodule QMI.Codec.NetworkAccess do
           serving_system_cs_attach_state: attach_state(),
           serving_system_ps_attach_state: attach_state(),
           serving_system_selected_network: network(),
-          serving_system_radio_interfaces: [radio_interface()]
+          serving_system_radio_interfaces: [radio_interface()],
+          cell_id: integer() | nil
         }
 
   @doc """
@@ -185,7 +186,8 @@ defmodule QMI.Codec.NetworkAccess do
       serving_system_cs_attach_state: :unknown,
       serving_system_ps_attach_state: :unknown,
       serving_system_selected_network: :network_unknown,
-      serving_system_radio_interfaces: []
+      serving_system_radio_interfaces: [],
+      cell_id: nil
     }
   end
 
@@ -210,6 +212,13 @@ defmodule QMI.Codec.NetworkAccess do
     }
 
     parse_serving_system_indication(parsed, rest)
+  end
+
+  defp parse_serving_system_indication(
+         serving_system_ind,
+         <<0x1E, 0x04::little-16, cell_id::little-32, rest::binary>>
+       ) do
+    parse_serving_system_indication(%{serving_system_ind | cell_id: cell_id}, rest)
   end
 
   defp parse_serving_system_indication(
