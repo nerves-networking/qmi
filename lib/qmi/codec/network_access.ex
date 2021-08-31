@@ -39,16 +39,44 @@ defmodule QMI.Codec.NetworkAccess do
 
   @type network() :: :network_unknown | :network_3gpp2 | :network_3gpp
 
+  @typedoc """
+  Required fields:
+
+  * `:name` - the name of the indication
+  * `:service_id` - the service id
+  * `:indication_id` - the indication id
+  * `:serving_system_registration_state` - the state of the registration status
+    to the serving system
+  * `:serving_system_cs_attach_state` - the circuit-switched domain attach state
+  * `:serving_system_ps_attach_state` - the packet-switched domain attach state
+  * `:serving_system_selected_network` - the type of selected radio access network
+  * `:serving_system_radio_interfaces` - a list of raido interfaces currently in use
+
+  Optional fields:
+
+  * `:cell_id` - the id of the cell being used by the connected tower
+  * `:timezone_offset` - the UTC offset in seconds
+  * `:location_area_code` - the location area code of a tower
+  * `:network_datetime` - the reported datetime of the network when connecting
+  * `:roaming` - if you are in roaming or not
+  * `:daylight_saving_adjustment` - `Calendar.std_offset()` for daylight savings
+    adjustment
+  """
   @type serving_system_indication() :: %{
-          name: :serving_system_indication,
-          service_id: 0x03,
-          indication_id: 0x0024,
-          serving_system_registration_state: serving_system_registration_state(),
-          serving_system_cs_attach_state: attach_state(),
-          serving_system_ps_attach_state: attach_state(),
-          serving_system_selected_network: network(),
-          serving_system_radio_interfaces: [radio_interface()],
-          cell_id: integer() | nil
+          required(:name) => :serving_system_indication,
+          required(:service_id) => 0x03,
+          required(:indication_id) => 0x0024,
+          required(:serving_system_registration_state) => serving_system_registration_state(),
+          required(:serving_system_cs_attach_state) => attach_state(),
+          required(:serving_system_ps_attach_state) => attach_state(),
+          required(:serving_system_selected_network) => network(),
+          required(:serving_system_radio_interfaces) => [radio_interface()],
+          optional(:cell_id) => integer(),
+          optional(:timezone_offset) => Calendar.utc_offset(),
+          optional(:location_area_code) => integer(),
+          optional(:network_datetime) => NaiveDateTime.t(),
+          optional(:roaming) => boolean(),
+          optional(:daylight_saving_adjustment) => Calendar.std_offset()
         }
 
   @doc """
@@ -186,8 +214,7 @@ defmodule QMI.Codec.NetworkAccess do
       serving_system_cs_attach_state: :unknown,
       serving_system_ps_attach_state: :unknown,
       serving_system_selected_network: :network_unknown,
-      serving_system_radio_interfaces: [],
-      cell_id: nil
+      serving_system_radio_interfaces: []
     }
   end
 
@@ -216,9 +243,60 @@ defmodule QMI.Codec.NetworkAccess do
 
   defp parse_serving_system_indication(
          serving_system_ind,
+         <<0x10, 0x01::little-16, roaming?, rest::binary>>
+       ) do
+    serving_system_ind
+    |> Map.put(:roaming, roaming? == 0)
+    |> parse_serving_system_indication(rest)
+  end
+
+  defp parse_serving_system_indication(
+         serving_system_ind,
          <<0x1E, 0x04::little-16, cell_id::little-32, rest::binary>>
        ) do
-    parse_serving_system_indication(%{serving_system_ind | cell_id: cell_id}, rest)
+    serving_system_ind
+    |> Map.put(:cell_id, cell_id)
+    |> parse_serving_system_indication(rest)
+  end
+
+  defp parse_serving_system_indication(
+         serving_system_indication,
+         <<0x1A, 0x01::little-16, offset::signed, rest::binary>>
+       ) do
+    serving_system_indication
+    |> Map.put(:timezone_offset, calc_tz_offset(offset))
+    |> parse_serving_system_indication(rest)
+  end
+
+  defp parse_serving_system_indication(
+         serving_system_indication,
+         <<0x1B, 0x01::little-16, adjustment, rest::binary>>
+       ) do
+    serving_system_indication
+    |> Map.put(:daylight_saving_adjustment, adjustment * 3600)
+    |> parse_serving_system_indication(rest)
+  end
+
+  defp parse_serving_system_indication(
+         serving_system_indication,
+         <<0x1D, 0x02::little-16, lac::little-16, rest::binary>>
+       ) do
+    serving_system_indication
+    |> Map.put(:location_area_code, lac)
+    |> parse_serving_system_indication(rest)
+  end
+
+  defp parse_serving_system_indication(
+         serving_system_indication,
+         <<0x1C, 0x08::little-16, year::little-16, month, day, hour, minute, second,
+           tz_offset::signed, rest::binary>>
+       ) do
+    {:ok, datetime} = NaiveDateTime.new(year, month, day, hour, minute, second)
+
+    serving_system_indication
+    |> Map.put(:network_datetime, datetime)
+    |> Map.put(:timezone_offset, calc_tz_offset(tz_offset))
+    |> parse_serving_system_indication(rest)
   end
 
   defp parse_serving_system_indication(
@@ -240,4 +318,6 @@ defmodule QMI.Codec.NetworkAccess do
   defp serving_system_network(0x00), do: :network_unknown
   defp serving_system_network(0x01), do: :network_3gpp2
   defp serving_system_network(0x02), do: :network_3gpp
+
+  defp calc_tz_offset(tz_offset), do: tz_offset * 15 * 60
 end
