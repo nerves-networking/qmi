@@ -43,8 +43,10 @@ defmodule QMI.Codec.NetworkAccessTest do
   test "parses serving system indication" do
     message = %{
       message:
-        <<36, 0, 44, 0, 1, 6, 0, 1, 1, 1, 2, 1, 5, 17, 4, 0, 3, 3, 4, 5, 18, 5, 0, 54, 1, 154, 1,
-          0, 40, 2, 0, 115, 0, 41, 5, 0, 54, 1, 154, 1, 1, 0x1E, 0x04, 0x00, 251, 28, 166, 1>>,
+        <<36, 0, 72, 0, 1, 6, 0, 1, 1, 1, 2, 1, 5, 17, 4, 0, 3, 3, 4, 5, 18, 5, 0, 54, 1, 154, 1,
+          0, 40, 2, 0, 115, 0, 41, 5, 0, 54, 1, 154, 1, 1, 0x1E, 0x04, 0x00, 251, 28, 166, 1,
+          0x1A, 0x01, 0x00, 0xE4, 0x1B, 0x1, 0x0, 0x0, 0x1C, 0x8, 0x0, 0xE5, 0x7, 0x8, 0x1F, 0x16,
+          0x26, 0x5, 0xE4, 0x1D, 0x2, 0x0, 0x5D, 0xBF, 0x10, 0x01, 0x00, 0x01>>,
       service_id: 3,
       transaction_id: 165,
       type: :indication
@@ -61,7 +63,12 @@ defmodule QMI.Codec.NetworkAccessTest do
                 serving_system_radio_interfaces: [:umts],
                 serving_system_registration_state: :registered,
                 serving_system_selected_network: :network_3gpp,
-                cell_id: 27_663_611
+                cell_id: 27_663_611,
+                timezone_offset: -25_200,
+                daylight_saving_adjustment: 0,
+                location_area_code: 48_989,
+                network_datetime: ~N[2021-08-31 22:38:05],
+                roaming: false
               }}
   end
 end
