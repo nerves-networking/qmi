@@ -55,11 +55,11 @@ defmodule QMI.Codec.NetworkAccess do
   Optional fields:
 
   * `:cell_id` - the id of the cell being used by the connected tower
-  * `:timezone_offset` - the UTC offset in seconds
+  * `:utc_offset` - the UTC offset in seconds
   * `:location_area_code` - the location area code of a tower
   * `:network_datetime` - the reported datetime of the network when connecting
   * `:roaming` - if you are in roaming or not
-  * `:daylight_saving_adjustment` - `Calendar.std_offset()` for daylight savings
+  * `:std_offset` - `Calendar.std_offset()` for daylight savings
     adjustment
   """
   @type serving_system_indication() :: %{
@@ -72,11 +72,11 @@ defmodule QMI.Codec.NetworkAccess do
           required(:serving_system_selected_network) => network(),
           required(:serving_system_radio_interfaces) => [radio_interface()],
           optional(:cell_id) => integer(),
-          optional(:timezone_offset) => Calendar.utc_offset(),
+          optional(:utc_offset) => Calendar.utc_offset(),
           optional(:location_area_code) => integer(),
           optional(:network_datetime) => NaiveDateTime.t(),
           optional(:roaming) => boolean(),
-          optional(:daylight_saving_adjustment) => Calendar.std_offset()
+          optional(:std_offset) => Calendar.std_offset()
         }
 
   @doc """
@@ -263,9 +263,18 @@ defmodule QMI.Codec.NetworkAccess do
          serving_system_indication,
          <<0x1A, 0x01::little-16, offset::signed, rest::binary>>
        ) do
-    serving_system_indication
-    |> Map.put(:timezone_offset, calc_tz_offset(offset))
+    indication = try_parse_std_offset(serving_system_indication, rest)
+
+    indication
+    |> Map.put(:utc_offset, calc_utc_offset(indication, offset))
     |> parse_serving_system_indication(rest)
+  end
+
+  defp parse_serving_system_indication(
+         %{std_offset: _std_offset} = indication,
+         <<0x1B, 0x01::little-16, _adjustment, rest::binary>>
+       ) do
+    parse_serving_system_indication(indication, rest)
   end
 
   defp parse_serving_system_indication(
@@ -273,7 +282,7 @@ defmodule QMI.Codec.NetworkAccess do
          <<0x1B, 0x01::little-16, adjustment, rest::binary>>
        ) do
     serving_system_indication
-    |> Map.put(:daylight_saving_adjustment, adjustment * 3600)
+    |> Map.put(:std_offset, adjustment * 3600)
     |> parse_serving_system_indication(rest)
   end
 
@@ -291,11 +300,12 @@ defmodule QMI.Codec.NetworkAccess do
          <<0x1C, 0x08::little-16, year::little-16, month, day, hour, minute, second,
            tz_offset::signed, rest::binary>>
        ) do
+    indication = try_parse_std_offset(serving_system_indication, rest)
     {:ok, datetime} = NaiveDateTime.new(year, month, day, hour, minute, second)
 
-    serving_system_indication
+    indication
     |> Map.put(:network_datetime, datetime)
-    |> Map.put(:timezone_offset, calc_tz_offset(tz_offset))
+    |> Map.put(:utc_offset, calc_utc_offset(indication, tz_offset))
     |> parse_serving_system_indication(rest)
   end
 
@@ -304,6 +314,26 @@ defmodule QMI.Codec.NetworkAccess do
          <<_type, length::16-little, _values::size(length)-binary, rest::binary>>
        ) do
     parse_serving_system_indication(parsed, rest)
+  end
+
+  defp try_parse_std_offset(%{std_offset: _std_offset} = indication, _binary) do
+    indication
+  end
+
+  defp try_parse_std_offset(indication, <<>>) do
+    indication
+  end
+
+  defp try_parse_std_offset(indication, <<0x1B, 0x01::little-16, adjustment, _rest::binary>>) do
+    indication
+    |> Map.put(:std_offset, adjustment * 3600)
+  end
+
+  defp try_parse_std_offset(
+         indication,
+         <<_type, length::little-16, _values::binary-size(length), rest::binary>>
+       ) do
+    try_parse_std_offset(indication, rest)
   end
 
   defp serving_system_registration_state(0x00), do: :not_registered
@@ -319,5 +349,16 @@ defmodule QMI.Codec.NetworkAccess do
   defp serving_system_network(0x01), do: :network_3gpp2
   defp serving_system_network(0x02), do: :network_3gpp
 
-  defp calc_tz_offset(tz_offset), do: tz_offset * 15 * 60
+  defp calc_utc_offset(%{std_offset: std_offset}, tz_offset) do
+    # QMI reports the overall offset. Elixir splits the offset into the amount
+    # that goes to standard time (utc_offset) + the daylight savings offset
+    # from standard time (std_offset).
+    utc_offset_to_seconds(tz_offset) - std_offset
+  end
+
+  defp calc_utc_offset(_indication, tz_offset) do
+    utc_offset_to_seconds(tz_offset)
+  end
+
+  defp utc_offset_to_seconds(offset), do: offset * 15 * 60
 end
