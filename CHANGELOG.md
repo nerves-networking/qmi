@@ -3,6 +3,23 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.5] - 2021-09-01
+
+### Added
+
+* `:cell_id` to the serving system indication (this is an optional field)
+* `:timezone_offset` to the serving system indication (this is an optional
+  field)
+* `:location_area_code` to the serving system indication (this is an optional
+  field)
+* `:network_datetime` to the serving system indication (this is an optional
+  field)
+* `:roaming` to the serving system indication (this is an optional field)
+* `:network_datetime` to the serving system indication (this is an optional
+  field)
+* `:daylight_saving_adjustment` to the serving system indication (this is an
+  optional field)
+
 ## [v0.6.4] - 2021-08-30
 
 ### Added
@@ -82,6 +99,8 @@ Major refactor
 
 Initial release
 
+[v0.6.5]: https://github.com/nerves-networking/qmi/compare/v0.6.4...v0.6.5
+[v0.6.4]: https://github.com/nerves-networking/qmi/compare/v0.6.3...v0.6.4
 [v0.6.3]: https://github.com/nerves-networking/qmi/compare/v0.6.2...v0.6.3
 [v0.6.2]: https://github.com/nerves-networking/qmi/compare/v0.6.1...v0.6.2
 [v0.6.1]: https://github.com/nerves-networking/qmi/compare/v0.6.0...v0.6.1
