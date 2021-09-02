@@ -3,6 +3,15 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.0] - 2021-09-02
+
+### Changed
+
+* Changed `QMI.Codec.NetworkAccess.serving_system_indication()` time zone
+  fields to match Elixir's `Calendar` module:
+  * `:timezone_offset` is now `:utc_offset`
+  * `:daylight_saving_adjustment` is now `:std_offset`
+
 ## [v0.6.5] - 2021-09-01
 
 ### Added
@@ -99,6 +108,7 @@ Major refactor
 
 Initial release
 
+[v0.6.5]: https://github.com/nerves-networking/qmi/compare/v0.6.5...v0.7.0
 [v0.6.5]: https://github.com/nerves-networking/qmi/compare/v0.6.4...v0.6.5
 [v0.6.4]: https://github.com/nerves-networking/qmi/compare/v0.6.3...v0.6.4
 [v0.6.3]: https://github.com/nerves-networking/qmi/compare/v0.6.2...v0.6.3
