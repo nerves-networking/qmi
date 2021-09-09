@@ -7,6 +7,7 @@ defmodule QMI.Codec.NetworkAccess do
   # messages
   @get_signal_strength 0x0020
   @get_home_network 0x0025
+  @get_rf_band_info 0x0031
 
   # indications
   @serving_system_indication 0x0024
@@ -30,6 +31,15 @@ defmodule QMI.Codec.NetworkAccess do
           mcc: char(),
           mnc: char(),
           provider: binary()
+        }
+
+  @typedoc """
+  Information about an radio interface band
+  """
+  @type rf_band_information() :: %{
+          interface: radio_interface(),
+          band: integer(),
+          channel: integer()
         }
 
   @type serving_system_registration_state() ::
@@ -136,6 +146,7 @@ defmodule QMI.Codec.NetworkAccess do
   defp radio_interface(0x04), do: :gsm
   defp radio_interface(0x05), do: :umts
   defp radio_interface(0x08), do: :lte
+  defp radio_interface(0x09), do: :td_scdma
 
   @doc """
   Make the request for getting the home network
@@ -361,4 +372,68 @@ defmodule QMI.Codec.NetworkAccess do
   end
 
   defp utc_offset_to_seconds(offset), do: offset * 15 * 60
+
+  @doc """
+  Get the radio band information
+  """
+  @spec get_rf_band_info() :: QMI.request()
+  def get_rf_band_info() do
+    %{
+      service_id: @network_access_service_id,
+      payload: <<@get_rf_band_info::little-16, 0x00::little-16>>,
+      decode: &parse_get_rf_band_info_resp/1
+    }
+  end
+
+  defp parse_get_rf_band_info_resp(
+         <<@get_rf_band_info::little-16, length::little-16, values::binary-size(length)>>
+       ) do
+    result = parse_get_rf_band_values([], values)
+
+    {:ok, result}
+  end
+
+  defp parse_get_rf_band_info_resp(_binary) do
+    {:error, :unexpected_response}
+  end
+
+  defp parse_get_rf_band_values(rf_band_info_list, <<>>) do
+    rf_band_info_list
+  end
+
+  defp parse_get_rf_band_values(
+         rf_band_info_list,
+         <<0x01, length::little-16, radio_band_information::binary-size(length), rest::binary>>
+       ) do
+    rf_band_info_list
+    |> parse_radio_ifs(radio_band_information)
+    |> parse_get_rf_band_values(rest)
+  end
+
+  defp parse_get_rf_band_values(
+         rf_band_info_list,
+         <<_type, length::little-16, _values::binary-size(length), rest::binary>>
+       ) do
+    parse_get_rf_band_values(rf_band_info_list, rest)
+  end
+
+  defp parse_radio_ifs(rf_band_info_list, <<number_of_instances, radio_ifs_bin::binary>>) do
+    parse_radio_band_information(rf_band_info_list, number_of_instances, radio_ifs_bin)
+  end
+
+  defp parse_radio_band_information(radio_ifs, 0, <<>>) do
+    radio_ifs
+  end
+
+  defp parse_radio_band_information(
+         radio_ifs,
+         n,
+         <<radio_if, active_band::little-16, active_channel::little-16, rest::binary>>
+       ) do
+    rifs =
+      radio_ifs ++
+        [%{interface: radio_interface(radio_if), band: active_band, channel: active_channel}]
+
+    parse_radio_band_information(rifs, n - 1, rest)
+  end
 end

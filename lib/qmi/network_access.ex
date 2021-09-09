@@ -25,4 +25,11 @@ defmodule QMI.NetworkAccess do
     Codec.NetworkAccess.get_home_network()
     |> QMI.call(qmi)
   end
+
+  @spec get_rf_band_info(QMI.name()) ::
+          {:ok, [Codec.NetworkAccess.rf_band_information()]} | {:error, atom()}
+  def get_rf_band_info(qmi) do
+    Codec.NetworkAccess.get_rf_band_info()
+    |> QMI.call(qmi)
+  end
 end
