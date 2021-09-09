@@ -71,4 +71,17 @@ defmodule QMI.Codec.NetworkAccessTest do
                 roaming: false
               }}
   end
+
+  test "get RF band information" do
+    request = NetworkAccess.get_rf_band_info()
+
+    assert IO.iodata_to_binary(request.payload) == <<0x31, 0, 0, 0>>
+    assert request.service_id == 0x03
+
+    assert request.decode.(
+             <<0x31, 0x0, 0x10, 0x0, 0x2, 0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x6, 0x0, 0x1, 0x5,
+               0x51, 0x0, 0xAF, 0x2>>
+           ) ==
+             {:ok, [%{band: 81, channel: 687, interface: :umts}]}
+  end
 end
