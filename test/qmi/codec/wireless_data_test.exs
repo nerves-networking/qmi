@@ -195,4 +195,116 @@ defmodule QMI.Codec.WirelessDataTest do
       assert indication.tech_name == :modem_link_local
     end
   end
+
+  describe "set_event_report/1" do
+    test "with no options" do
+      request = WirelessData.set_event_report()
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0xFF, 0x03, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with stats interval option" do
+      request = WirelessData.set_event_report(statistics_interval: 30)
+
+      assert [_header, <<0x11, 0x05::little-16, 30, 0xFF, 0x03, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with no stats" do
+      request = WirelessData.set_event_report(statistics: :none)
+
+      assert [_header, <<>>] = request.payload
+    end
+
+    test "with tx_packets option" do
+      request = WirelessData.set_event_report(statistics: [:tx_packets])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x01, 0x00, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with rx_packets option" do
+      request = WirelessData.set_event_report(statistics: [:rx_packets])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x02, 0x00, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with tx_errors option" do
+      request = WirelessData.set_event_report(statistics: [:tx_errors])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x04, 0x00, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with rx_errors option" do
+      request = WirelessData.set_event_report(statistics: [:rx_errors])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x08, 0x00, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with tx_overflows" do
+      request = WirelessData.set_event_report(statistics: [:tx_overflows])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x10, 0x00, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with rx_overflows" do
+      request = WirelessData.set_event_report(statistics: [:rx_overflows])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x20, 0x00, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with tx_bytes" do
+      request = WirelessData.set_event_report(statistics: [:tx_bytes])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x40, 0x00, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with rx_bytes" do
+      request = WirelessData.set_event_report(statistics: [:rx_bytes])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x80, 0x00, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with tx_drops" do
+      request = WirelessData.set_event_report(statistics: [:tx_drops])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x00, 0x01, 0x00, 0x00>>] = request.payload
+    end
+
+    test "with rx_drops" do
+      request = WirelessData.set_event_report(statistics: [:rx_drops])
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0x00, 0x02, 0x00, 0x00>>] = request.payload
+    end
+
+    test "only a few stats requested" do
+      request =
+        WirelessData.set_event_report(
+          statistics: [:tx_packets, :rx_packets, :tx_bytes, :rx_bytes, :rx_drops]
+        )
+
+      assert [_header, <<0x11, 0x05::little-16, 0x3C, 0xC3, 0x02, 0x00, 0x00>>] = request.payload
+    end
+  end
+
+  test "parsing event report indication" do
+    binary =
+      <<0x1, 0x0, 0x4E, 0x0, 0x10, 0x4, 0x0, 0x1C, 0x0, 0x0, 0x0, 0x11, 0x4, 0x0, 0x10, 0x0, 0x0,
+        0x0, 0x12, 0x4, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0x13, 0x4, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0x14,
+        0x4, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0x15, 0x4, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0x19, 0x8, 0x0,
+        0xF0, 0x5, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1A, 0x8, 0x0, 0x80, 0x3, 0x0, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x25, 0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x26, 0x4, 0x0, 0x0, 0x0, 0x0, 0x0>>
+
+    assert {:ok,
+            %{
+              name: :event_report_indication,
+              rx_bytes: 896,
+              rx_errors: 4_294_967_295,
+              rx_overflows: 4_294_967_295,
+              rx_packets: 16,
+              tx_bytes: 1520,
+              tx_errors: 4_294_967_295,
+              tx_overflows: 4_294_967_295,
+              tx_packets: 28
+            }} ==
+             WirelessData.parse_indication(binary)
+  end
 end
