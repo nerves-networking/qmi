@@ -41,7 +41,7 @@ defmodule QMI do
   @type request() :: %{
           service_id: non_neg_integer(),
           payload: iodata(),
-          decode: (binary() -> {:ok, any()} | {:error, atom()})
+          decode: (binary() -> :ok | {:ok, any()} | {:error, atom()})
         }
 
   @typedoc """

@@ -3,6 +3,9 @@ defmodule QMI.Codec.WirelessData do
   Codec for making wireless data service requests
   """
 
+  import Bitwise
+
+  @event_report 0x0001
   @start_network_interface 0x0020
   @packet_service_status_ind 0x0022
 
@@ -51,6 +54,26 @@ defmodule QMI.Codec.WirelessData do
           tech_name: tech_name() | nil,
           bearer_id: integer() | nil,
           xlat_capable: boolean() | nil
+        }
+
+  @typedoc """
+  The indication for the wireless data service's event report
+
+  To configure what information is sent through this indication see
+  set_event_report/1`.
+  """
+  @type event_report_indication() :: %{
+          required(:name) => :event_report_indication,
+          optional(:tx_bytes) => integer(),
+          optional(:rx_bytes) => integer(),
+          optional(:tx_packets) => integer(),
+          optional(:rx_packets) => integer(),
+          optional(:tx_overflows) => integer(),
+          optional(:rx_overflows) => integer(),
+          optional(:tx_errors) => integer(),
+          optional(:rx_errors) => integer(),
+          optional(:tx_drops) => integer(),
+          optional(:rx_drops) => integer()
         }
 
   @doc """
@@ -109,13 +132,18 @@ defmodule QMI.Codec.WirelessData do
   Try to parse an indication from the wireless data service
   """
   @spec parse_indication(binary()) ::
-          {:ok, packet_status_indication()} | {:error, :invalid_indication}
+          {:ok, packet_status_indication() | event_report_indication()}
+          | {:error, :invalid_indication}
   def parse_indication(
         <<@packet_service_status_ind::16-little, size::16-little, tlvs::binary-size(size)>>
       ) do
     result = parse_packet_status_indication(packet_status_indication_init(), tlvs)
 
     {:ok, result}
+  end
+
+  def parse_indication(<<@event_report::little-16, size::16-little, tlvs::binary-size(size)>>) do
+    {:ok, parse_event_report_indication(%{name: :event_report_indication}, tlvs)}
   end
 
   def parse_indication(_other) do
@@ -229,4 +257,189 @@ defmodule QMI.Codec.WirelessData do
   defp parse_call_end_reason_type(0x08), do: :ehrpd
   defp parse_call_end_reason_type(0x09), do: :ipv6
   defp parse_call_end_reason_type(0x0C), do: :handoff
+
+  def parse_event_report_indication(event_report_indication, <<>>), do: event_report_indication
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x10, 0x04::little-16, tx_packets_count::little-32, rest::binary>>
+      ) do
+    event_report_indication
+    |> Map.put(:tx_packets, tx_packets_count)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x11, 0x04::little-16, rx_packets_count::little-32, rest::binary>>
+      ) do
+    event_report_indication
+    |> Map.put(:rx_packets, rx_packets_count)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x12, 0x04::little-16, tx_error_count::little-32, rest::binary>>
+      ) do
+    event_report_indication
+    |> Map.put(:tx_errors, tx_error_count)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x13, 0x04::little-16, rx_error_count::little-32, rest::binary>>
+      ) do
+    event_report_indication
+    |> Map.put(:rx_errors, rx_error_count)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x14, 0x04::little-16, tx_overflow_count::little-32, rest::binary>>
+      ) do
+    event_report_indication
+    |> Map.put(:tx_overflows, tx_overflow_count)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x15, 0x04::little-16, rx_overflow_count::little-32, rest::binary>>
+      ) do
+    event_report_indication
+    |> Map.put(:rx_overflows, rx_overflow_count)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x19, 0x08::little-16, tx_byte_count::little-64, rest::binary>>
+      ) do
+    event_report_indication
+    |> Map.put(:tx_bytes, tx_byte_count)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x1A, 0x08::little-16, rx_byte_count::little-64, rest::binary>>
+      ) do
+    event_report_indication
+    |> Map.put(:rx_bytes, rx_byte_count)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<_type, length::little-16, _values::binary-size(length), rest::binary>>
+      ) do
+    parse_event_report_indication(event_report_indication, rest)
+  end
+
+  @typedoc """
+  The type of measurement you are wanting to be reported
+
+  * `:tx_bytes` - number of bytes transmitted
+  * `:rx_bytes` - number of bytes received
+  * `:tx_packets` - number of transmit packets sent without error
+  * `:rx_packets` - number of packets received without error
+  * `:tx_overflows` - number of packets dropped due to tx buffer
+    overflowed (out of memory)
+  * `:rx_overflows` - number of packets dropped due to rx buffer
+    overflowed (out of memory)
+  * `:tx_errors` - number of outgoing packets with framing errors
+  * `:rx_errors` - number of incoming packets with framing errors
+  * `:tx_drops` - number outgoing packets dropped
+  * `:rx_drops` - number incoming packets dropped
+  """
+  @type statistic_measurement() ::
+          :tx_bytes
+          | :rx_bytes
+          | :tx_packets
+          | :rx_packets
+          | :tx_overflows
+          | :rx_overflows
+          | :tx_errors
+          | :rx_errors
+          | :tx_drops
+          | :rx_drops
+
+  @typedoc """
+  Options for the wireless data event report configuration
+
+  * `:statistics_interval` - an interval in seconds on when to report statistics
+    about transmit and receive operations
+  * `:statistics` - list which statistic measurements to report
+
+  For transmit and receive statistics, if no interval is provided the default is
+  60 seconds. If the `:statistics` option is not provided it will default to
+  `:all`. The report is only sent in the interval if there was a change in any
+  of the statistics. So, if no changes took place the report will be skipped for
+  an interval.
+
+  To configure event report to not included any stats pass `:none` to
+  the `:statistics` option.
+  """
+  @type event_report_opt() ::
+          {:statistics_interval, non_neg_integer()}
+          | {:statistics, [statistic_measurement()] | :all | :none}
+
+  @doc """
+  Request to set the wireless data services event report options
+  """
+  @spec set_event_report([event_report_opt()]) :: QMI.request()
+  def set_event_report(opts \\ []) do
+    tlvs = make_tlvs(opts)
+    length = byte_size(tlvs)
+
+    payload = [<<@event_report::little-16, length::little-16>>, tlvs]
+
+    %{service_id: 0x01, payload: payload, decode: &parse_set_event_response/1}
+  end
+
+  defp make_tlvs(opts) do
+    case opts[:statistics] do
+      :none ->
+        <<>>
+
+      stats ->
+        # if no stats are specified we will get them all
+        default_stats = stats || :all
+        interval = opts[:statistics_interval] || 60
+        mask = statistics_mask(default_stats)
+
+        <<0x11, 0x05::little-16, interval, mask::little-32>>
+    end
+  end
+
+  def statistics_mask(:all) do
+    0x03FF
+  end
+
+  def statistics_mask(stats) do
+    for stat <- stats, reduce: 0 do
+      mask ->
+        stat_to_integer(stat) ||| mask
+    end
+  end
+
+  def stat_to_integer(:tx_packets), do: 0x01
+  def stat_to_integer(:rx_packets), do: 0x02
+  def stat_to_integer(:tx_errors), do: 0x04
+  def stat_to_integer(:rx_errors), do: 0x08
+  def stat_to_integer(:tx_overflows), do: 0x10
+  def stat_to_integer(:rx_overflows), do: 0x20
+  def stat_to_integer(:tx_bytes), do: 0x40
+  def stat_to_integer(:rx_bytes), do: 0x80
+  def stat_to_integer(:tx_drops), do: 0x0100
+  def stat_to_integer(:rx_drops), do: 0x0200
+
+  defp parse_set_event_response(
+         <<@event_report::little-16, size::little-16, _values::binary-size(size)>>
+       ) do
+    :ok
+  end
 end
