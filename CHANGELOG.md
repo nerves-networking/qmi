@@ -3,6 +3,22 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.1] - 2021-09-16
+
+### Added
+
+* `QMI.NetworkAccess.get_rf_band_info/1` to get band and channel information
+* `QMI.WirelessData.set_event_report/2` to configure the wireless data service
+  to report transmit and receive stats
+* Parsing for wireless data service's event report indication
+* `QMI.Codec.WirelessData.set_event_report/1`
+* `QMI.Codec.NetworkAccess.get_rf_band_info/0`
+
+### Changed
+
+* `QMI.request()` decode function type now allows returning `:ok` for request
+  that who's response does not contain any information.
+
 ## [v0.7.0] - 2021-09-02
 
 ### Changed
@@ -108,7 +124,8 @@ Major refactor
 
 Initial release
 
-[v0.6.5]: https://github.com/nerves-networking/qmi/compare/v0.6.5...v0.7.0
+[v0.7.1]: https://github.com/nerves-networking/qmi/compare/v0.7.0...v0.7.1
+[v0.7.0]: https://github.com/nerves-networking/qmi/compare/v0.6.5...v0.7.0
 [v0.6.5]: https://github.com/nerves-networking/qmi/compare/v0.6.4...v0.6.5
 [v0.6.4]: https://github.com/nerves-networking/qmi/compare/v0.6.3...v0.6.4
 [v0.6.3]: https://github.com/nerves-networking/qmi/compare/v0.6.2...v0.6.3
