@@ -3,6 +3,17 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.0] - 2019-09-21
+
+This release breaks the type `QMI.Codec.NetworkAccess.rf_band_information()` by
+changing the `:band` field to a string for a more user friendly description of
+the current active band.
+
+### Changed
+
+* Changed `QMI.Codec.NetworkAccess.rf_band_information()` field `:band` from
+  `integer()` to `binary()`
+
 ## [v0.7.1] - 2021-09-16
 
 ### Added
@@ -124,6 +135,7 @@ Major refactor
 
 Initial release
 
+[v0.8.0]: https://github.com/nerves-networking/qmi/compare/v0.7.1...v0.8.0
 [v0.7.1]: https://github.com/nerves-networking/qmi/compare/v0.7.0...v0.7.1
 [v0.7.0]: https://github.com/nerves-networking/qmi/compare/v0.6.5...v0.7.0
 [v0.6.5]: https://github.com/nerves-networking/qmi/compare/v0.6.4...v0.6.5
