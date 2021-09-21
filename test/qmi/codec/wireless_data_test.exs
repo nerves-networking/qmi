@@ -297,12 +297,12 @@ defmodule QMI.Codec.WirelessDataTest do
             %{
               name: :event_report_indication,
               rx_bytes: 896,
-              rx_errors: 4_294_967_295,
-              rx_overflows: 4_294_967_295,
+              rx_errors: 0,
+              rx_overflows: 0,
               rx_packets: 16,
               tx_bytes: 1520,
-              tx_errors: 4_294_967_295,
-              tx_overflows: 4_294_967_295,
+              tx_errors: 0,
+              tx_overflows: 0,
               tx_packets: 28
             }} ==
              WirelessData.parse_indication(binary)
