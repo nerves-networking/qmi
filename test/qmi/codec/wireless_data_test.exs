@@ -303,7 +303,9 @@ defmodule QMI.Codec.WirelessDataTest do
               tx_bytes: 1520,
               tx_errors: 0,
               tx_overflows: 0,
-              tx_packets: 28
+              tx_packets: 28,
+              tx_drops: 0,
+              rx_drops: 0
             }} ==
              WirelessData.parse_indication(binary)
   end

@@ -353,6 +353,28 @@ defmodule QMI.Codec.WirelessData do
 
   def parse_event_report_indication(
         event_report_indication,
+        <<0x25, 0x04::little-16, tx_packets_dropped::little-32, rest::binary>>
+      ) do
+    tx_drops = get_stat_value(tx_packets_dropped)
+
+    event_report_indication
+    |> Map.put(:tx_drops, tx_drops)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
+        <<0x26, 0x04::little-16, rx_packets_dropped::little-32, rest::binary>>
+      ) do
+    rx_drops = get_stat_value(rx_packets_dropped)
+
+    event_report_indication
+    |> Map.put(:rx_drops, rx_drops)
+    |> parse_event_report_indication(rest)
+  end
+
+  def parse_event_report_indication(
+        event_report_indication,
         <<_type, length::little-16, _values::binary-size(length), rest::binary>>
       ) do
     parse_event_report_indication(event_report_indication, rest)
