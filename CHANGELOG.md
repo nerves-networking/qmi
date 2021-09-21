@@ -3,6 +3,13 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.1] - 2019-09-21
+
+### Fixes
+
+* Wrong value for TX/RX stats that have no data to report yet
+* Actually parse TX/RX packets drop count
+
 ## [v0.8.0] - 2019-09-21
 
 This release breaks the type `QMI.Codec.NetworkAccess.rf_band_information()` by
@@ -135,6 +142,7 @@ Major refactor
 
 Initial release
 
+[v0.8.1]: https://github.com/nerves-networking/qmi/compare/v0.8.0...v0.8.1
 [v0.8.0]: https://github.com/nerves-networking/qmi/compare/v0.7.1...v0.8.0
 [v0.7.1]: https://github.com/nerves-networking/qmi/compare/v0.7.0...v0.7.1
 [v0.7.0]: https://github.com/nerves-networking/qmi/compare/v0.6.5...v0.7.0
