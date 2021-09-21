@@ -9,6 +9,13 @@ defmodule QMI.Codec.WirelessData do
   @start_network_interface 0x0020
   @packet_service_status_ind 0x0022
 
+  # When a stat is configured to be reported but no data has been recorded
+  # before the indication is sent, the value is `0xFFFFFFFF` which is treated as
+  # a missing value in many other places in the specification. Using libqmi as a
+  # reference we use this value to check if the value is missing.
+  # https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/master/src/qmicli/qmicli-wds.c#L1068-1091
+  @missing_stat_value 0xFFFFFFFF
+
   @typedoc """
   Options for whens starting a network interface
 
@@ -264,8 +271,10 @@ defmodule QMI.Codec.WirelessData do
         event_report_indication,
         <<0x10, 0x04::little-16, tx_packets_count::little-32, rest::binary>>
       ) do
+    tx_packets = get_stat_value(tx_packets_count)
+
     event_report_indication
-    |> Map.put(:tx_packets, tx_packets_count)
+    |> Map.put(:tx_packets, tx_packets)
     |> parse_event_report_indication(rest)
   end
 
@@ -273,8 +282,10 @@ defmodule QMI.Codec.WirelessData do
         event_report_indication,
         <<0x11, 0x04::little-16, rx_packets_count::little-32, rest::binary>>
       ) do
+    rx_packets = get_stat_value(rx_packets_count)
+
     event_report_indication
-    |> Map.put(:rx_packets, rx_packets_count)
+    |> Map.put(:rx_packets, rx_packets)
     |> parse_event_report_indication(rest)
   end
 
@@ -282,8 +293,10 @@ defmodule QMI.Codec.WirelessData do
         event_report_indication,
         <<0x12, 0x04::little-16, tx_error_count::little-32, rest::binary>>
       ) do
+    tx_errors = get_stat_value(tx_error_count)
+
     event_report_indication
-    |> Map.put(:tx_errors, tx_error_count)
+    |> Map.put(:tx_errors, tx_errors)
     |> parse_event_report_indication(rest)
   end
 
@@ -291,8 +304,10 @@ defmodule QMI.Codec.WirelessData do
         event_report_indication,
         <<0x13, 0x04::little-16, rx_error_count::little-32, rest::binary>>
       ) do
+    rx_errors = get_stat_value(rx_error_count)
+
     event_report_indication
-    |> Map.put(:rx_errors, rx_error_count)
+    |> Map.put(:rx_errors, rx_errors)
     |> parse_event_report_indication(rest)
   end
 
@@ -300,8 +315,10 @@ defmodule QMI.Codec.WirelessData do
         event_report_indication,
         <<0x14, 0x04::little-16, tx_overflow_count::little-32, rest::binary>>
       ) do
+    tx_overflows = get_stat_value(tx_overflow_count)
+
     event_report_indication
-    |> Map.put(:tx_overflows, tx_overflow_count)
+    |> Map.put(:tx_overflows, tx_overflows)
     |> parse_event_report_indication(rest)
   end
 
@@ -309,8 +326,10 @@ defmodule QMI.Codec.WirelessData do
         event_report_indication,
         <<0x15, 0x04::little-16, rx_overflow_count::little-32, rest::binary>>
       ) do
+    rx_overflows = get_stat_value(rx_overflow_count)
+
     event_report_indication
-    |> Map.put(:rx_overflows, rx_overflow_count)
+    |> Map.put(:rx_overflows, rx_overflows)
     |> parse_event_report_indication(rest)
   end
 
@@ -338,6 +357,9 @@ defmodule QMI.Codec.WirelessData do
       ) do
     parse_event_report_indication(event_report_indication, rest)
   end
+
+  defp get_stat_value(value) when value == @missing_stat_value, do: 0
+  defp get_stat_value(value), do: value
 
   @typedoc """
   The type of measurement you are wanting to be reported
