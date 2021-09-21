@@ -38,7 +38,7 @@ defmodule QMI.Codec.NetworkAccess do
   """
   @type rf_band_information() :: %{
           interface: radio_interface(),
-          band: integer(),
+          band: binary(),
           channel: integer()
         }
 
@@ -432,8 +432,71 @@ defmodule QMI.Codec.NetworkAccess do
        ) do
     rifs =
       radio_ifs ++
-        [%{interface: radio_interface(radio_if), band: active_band, channel: active_channel}]
+        [
+          %{
+            interface: radio_interface(radio_if),
+            band: parse_active_band(active_band),
+            channel: active_channel
+          }
+        ]
 
     parse_radio_band_information(rifs, n - 1, rest)
   end
+
+  # Parsing logic uses libqmi enumeration definition as reference
+  # https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/master/src/libqmi-glib/qmi-enums-nas.h#L173-269
+  defp parse_active_band(band) when band >= 0 and band <= 19 do
+    "CDMA Band Class #{band}"
+  end
+
+  defp parse_active_band(band) when band >= 40 and band <= 48 do
+    "GSM #{gsm_band_name(band)}"
+  end
+
+  defp parse_active_band(band) when band >= 80 and band <= 91 and band != 89 do
+    "WCDMA #{wcdma_band_name(band)}"
+  end
+
+  defp parse_active_band(band) when band >= 120 and band <= 162 do
+    "LTE Band #{lte_band_name(band)}"
+  end
+
+  defp parse_active_band(band) when band >= 200 and band <= 205 do
+    "TDS-CDMA Band #{tds_cdma_band_name(band)}"
+  end
+
+  defp parse_active_band(band) do
+    "Unknown Band #{band}"
+  end
+
+  defp gsm_band_name(40), do: "450"
+  defp gsm_band_name(41), do: "480"
+  defp gsm_band_name(42), do: "750"
+  defp gsm_band_name(43), do: "850"
+  defp gsm_band_name(44), do: "900 Extended"
+  defp gsm_band_name(45), do: "900 Primary"
+  defp gsm_band_name(46), do: "900 Railways"
+  defp gsm_band_name(47), do: "DCS 1800"
+  defp gsm_band_name(48), do: "PCS 1900"
+
+  defp wcdma_band_name(80), do: "2100"
+  defp wcdma_band_name(81), do: "PCS 1900"
+  defp wcdma_band_name(82), do: "DCS 1800"
+  defp wcdma_band_name(83), do: "1700 US"
+  defp wcdma_band_name(84), do: "850"
+  defp wcdma_band_name(85), do: "800"
+  defp wcdma_band_name(86), do: "2600"
+  defp wcdma_band_name(87), do: "900"
+  defp wcdma_band_name(88), do: "1700 Japan"
+  defp wcdma_band_name(90), do: "1500 Japan"
+  defp wcdma_band_name(91), do: "850 Japan"
+
+  defp lte_band_name(n), do: Integer.to_string(n - 120 + 1)
+
+  defp tds_cdma_band_name(200), do: "A"
+  defp tds_cdma_band_name(201), do: "B"
+  defp tds_cdma_band_name(202), do: "C"
+  defp tds_cdma_band_name(203), do: "D"
+  defp tds_cdma_band_name(204), do: "E"
+  defp tds_cdma_band_name(205), do: "F"
 end
