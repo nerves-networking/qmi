@@ -2,6 +2,8 @@ defmodule QMI.Codec.NetworkAccess do
   @moduledoc """
   Codec for making network access service requests
   """
+  require Logger
+
   @network_access_service_id 0x03
 
   # messages
@@ -11,6 +13,7 @@ defmodule QMI.Codec.NetworkAccess do
 
   # indications
   @serving_system_indication 0x0024
+  @operator_name_indication 0x003A
 
   @typedoc """
   The radio interface that is being reported
@@ -87,6 +90,12 @@ defmodule QMI.Codec.NetworkAccess do
           optional(:network_datetime) => NaiveDateTime.t(),
           optional(:roaming) => boolean(),
           optional(:std_offset) => Calendar.std_offset()
+        }
+
+  @type operator_name_indication() :: %{
+          name: :operator_name_indication,
+          long_name: binary(),
+          short_name: binary()
         }
 
   @doc """
@@ -212,6 +221,17 @@ defmodule QMI.Codec.NetworkAccess do
     {:ok, result}
   end
 
+  def parse_indication(
+        <<@operator_name_indication::16-little, size::16-little, tlvs::binary-size(size)>>
+      ) do
+    result =
+      :operator_name_indication
+      |> init_indication()
+      |> parse_operator_name_indication(tlvs)
+
+    {:ok, result}
+  end
+
   def parse_indication(_other) do
     {:error, :invalid_indication}
   end
@@ -228,6 +248,43 @@ defmodule QMI.Codec.NetworkAccess do
       serving_system_radio_interfaces: []
     }
   end
+
+  defp init_indication(:operator_name_indication = name) do
+    %{
+      name: name,
+      long_name: "",
+      short_name: ""
+    }
+  end
+
+  defp parse_operator_name_indication(indication, <<>>), do: indication
+
+  defp parse_operator_name_indication(
+         indication,
+         <<0x14, size::16-little, nitz_info::binary-size(size), rest::binary>>
+       ) do
+    <<name_encoding, _other_encodings::24, long_name_size, long_name::binary-size(long_name_size),
+      short_name_size, short_name::binary-size(short_name_size)>> = nitz_info
+
+    indication
+    |> Map.put(:long_name, parse_operator_name(name_encoding, long_name))
+    |> Map.put(:short_name, parse_operator_name(name_encoding, short_name))
+    |> parse_operator_name_indication(rest)
+  end
+
+  defp parse_operator_name_indication(
+         indication,
+         <<type, size, values::binary-size(size), rest::binary>>
+       ) do
+    Logger.debug("[QMI]: Ignoring TLV from operator name indication #{type} #{size} #{values}")
+
+    parse_operator_name(indication, rest)
+  end
+
+  # libQMI parses UCS2 as UTF-16.
+  # https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/blob/master/src/libqmi-glib/qmi-helpers.c#L404
+  defp parse_operator_name(1, name), do: :unicode.characters_to_binary(name, {:utf16, :big})
+  defp parse_operator_name(_other_encoding, name), do: name
 
   defp parse_serving_system_indication(parsed, <<>>) do
     parsed
