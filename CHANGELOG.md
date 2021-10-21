@@ -3,14 +3,20 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.8.1] - 2019-09-21
+## [v0.8.2] - 2021-10-21
+
+### Added
+
+* Basic parsing of the NAS operator name indication
+
+## [v0.8.1] - 2021-09-21
 
 ### Fixes
 
 * Wrong value for TX/RX stats that have no data to report yet
 * Actually parse TX/RX packets drop count
 
-## [v0.8.0] - 2019-09-21
+## [v0.8.0] - 2021-09-21
 
 This release breaks the type `QMI.Codec.NetworkAccess.rf_band_information()` by
 changing the `:band` field to a string for a more user friendly description of
@@ -142,6 +148,7 @@ Major refactor
 
 Initial release
 
+[v0.8.2]: https://github.com/nerves-networking/qmi/compare/v0.8.1...v0.8.2
 [v0.8.1]: https://github.com/nerves-networking/qmi/compare/v0.8.0...v0.8.1
 [v0.8.0]: https://github.com/nerves-networking/qmi/compare/v0.7.1...v0.8.0
 [v0.7.1]: https://github.com/nerves-networking/qmi/compare/v0.7.0...v0.7.1
