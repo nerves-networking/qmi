@@ -84,4 +84,15 @@ defmodule QMI.Codec.NetworkAccessTest do
            ) ==
              {:ok, [%{band: "WCDMA PCS 1900", channel: 687, interface: :umts}]}
   end
+
+  test "parse operator name indication" do
+    indication =
+      <<58, 0, 25, 0, 20, 22, 0, 1, 0, 0, 0, 8, 0, 65, 0, 84, 0, 38, 0, 84, 8, 0, 65, 0, 84, 0,
+        38, 0, 84>>
+
+    message = %{message: indication, service_id: 3}
+
+    assert QMI.Codec.Indication.parse(message) ==
+             {:ok, %{name: :operator_name_indication, long_name: "AT&T", short_name: "AT&T"}}
+  end
 end
