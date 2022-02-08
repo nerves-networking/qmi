@@ -4,12 +4,16 @@ defmodule QMI.Codec.NetworkAccess do
   """
   require Logger
 
+  import Bitwise
+
   @network_access_service_id 0x03
 
   # messages
   @get_signal_strength 0x0020
   @get_home_network 0x0025
   @get_rf_band_info 0x0031
+  @set_system_selection_preference 0x0033
+  @get_system_selection_preference 0x0034
 
   # indications
   @serving_system_indication 0x0024
@@ -98,6 +102,25 @@ defmodule QMI.Codec.NetworkAccess do
           short_name: binary()
         }
 
+  @typedoc """
+  How long a system preference change should be applied
+
+  * `:power_cycle` - only remains active until the next power cycle
+  * `:permanent` - remains active through power cycles until changed by a client
+  """
+  @type preference_change_duration() :: :power_cycle | :permanent
+
+  @typedoc """
+  The options to configure the system selection preference
+
+  * `:mode_preference` - which radio access technologies should the modem use
+  * `:change_duration` - the `preference_change_duration()` for the applied
+    settings. The default is `:permanent`.
+  """
+  @type set_system_selection_preference_opt() ::
+          {:mode_preference, [radio_interface()]}
+          | {:change_duration, preference_change_duration()}
+
   @doc """
   Make the `QMI.request()` for getting signal strength
   """
@@ -156,6 +179,300 @@ defmodule QMI.Codec.NetworkAccess do
   defp radio_interface(0x05), do: :umts
   defp radio_interface(0x08), do: :lte
   defp radio_interface(0x09), do: :td_scdma
+
+  @typedoc """
+  The roaming preference
+
+  * `:off` - acquire only systems for which the roaming indicator is off
+  * `:not_off` - acquire a system as long as its roaming indicator is not off
+  * `:not_flashing` - acquire a system as for which the roaming indicator is
+    off or solid on - CDMA only.
+  * `:any` - acquire systems, regardless of their roaming indicator
+  """
+  @type roaming_preference() :: :off | :not_off | :not_flashing | :any
+
+  @typedoc """
+  The networking selection preference
+
+  * `:automatic` - automatically select the network
+  * `:manual` - manually select the network
+  """
+  @type network_selection_preference() :: :automatic | :manual
+
+  @typedoc """
+  The network registration restriction preference
+
+  * `:unrestricted` - device follows the normal registration process
+  * `:camped_only` - device will camp on a network but not register
+  * `:limited` - device selects the network for limited service
+
+  This can also be integer value that is specified by the specific modem
+  provider
+  """
+  @type registration_restriction_preference() ::
+          :unrestricted | :camped_only | :limited | non_neg_integer()
+
+  @typedoc """
+  The modem usage preference setting
+
+  `:unknown` - device does not know the usage preference setting
+  `:voice_centric` - the device is set for voice centric usage
+  `:data_centric` - the device is set for data centric
+  """
+  @type usage_setting_preference() :: :unknown | :voice_centric | :data_centric
+
+  @typedoc """
+  The voice domain preference setting
+
+  * `:cs_only` - circuit-switched (CS) voice only
+  * `:ps_only` - packet-switched (PS) voice only
+  * `:cs_preferred` - PS is secondary
+  * `:ps_preferred` - CS is secondary
+  """
+  @type voice_domain_preference() :: :cs_only | :ps_only | :cs_preferred | :ps_preferred
+
+  @typedoc """
+  Preference settings for when a device selects a system
+
+  * `:emergency_mode` - `:on` if the device is in emergency mode, `:off`
+    otherwise
+  * `:mode_preference` - a list of radio access technologies the device will
+    try to use
+  * `:roaming_preference` - the device roaming preference
+  * `:network_selection_preference` - if the device will automatically select
+    a network
+  * `:acquisition_order` - the order in which the device will try to connect
+    to a radio access technology
+  * `:registration_restriction` - the system registration restriction
+  * `:usage_settings` - the modem usage preference
+  * `:voice_domain_preference` - the voice domain preference
+  """
+  @type get_system_selection_preference_response() :: %{
+          optional(:emergency_mode) => :off | :on,
+          optional(:mode_preference) => [radio_interface()],
+          optional(:roaming_preference) => roaming_preference(),
+          optional(:network_selection_preference) => network_selection_preference(),
+          optional(:acquisition_order) => [radio_interface()],
+          optional(:registration_restriction) => registration_restriction_preference(),
+          optional(:usage_settings) => usage_setting_preference(),
+          optional(:voice_domain) => voice_domain_preference()
+        }
+
+  @doc """
+  Make `QMI.request()` to get the system selection preferences
+  """
+  @spec get_system_selection_preference() :: QMI.request()
+  def get_system_selection_preference() do
+    %{
+      service_id: @network_access_service_id,
+      payload: <<@get_system_selection_preference::little-16, 0x00, 0x00>>,
+      decode: &parse_get_system_selection_preference/1
+    }
+  end
+
+  defp parse_get_system_selection_preference(
+         <<@get_system_selection_preference::little-16, size::little-16, tlvs::size(size)-binary>>
+       ) do
+    {:ok, do_parse_get_system_selection_preference(%{}, tlvs)}
+  end
+
+  defp parse_get_system_selection_preference(_other) do
+    {:error, :unexpected_response}
+  end
+
+  defp do_parse_get_system_selection_preference(parsed_tlvs, <<>>) do
+    parsed_tlvs
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<0x10, 0x01::little-16, emergency_mode, rest::binary>>
+       ) do
+    tlvs
+    |> Map.put(:emergency_mode, parse_emergency_mode(emergency_mode))
+    |> do_parse_get_system_selection_preference(rest)
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<0x11, 0x02::little-16, rat_mask::little-16, rest::binary>>
+       ) do
+    possible_rats = [
+      {:cdma_1x, 0x01},
+      {:cdma_1x_evdo, 0x02},
+      {:gsm, 0x04},
+      {:umts, 0x08},
+      {:lte, 0x10},
+      {:td_scdma, 0x20}
+    ]
+
+    rats_list =
+      Enum.reduce(possible_rats, [], fn {rat, byte}, list ->
+        if (rat_mask &&& byte) == byte do
+          [rat | list]
+        else
+          list
+        end
+      end)
+
+    tlvs
+    |> Map.put(:mode_preference, rats_list)
+    |> do_parse_get_system_selection_preference(rest)
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<0x14, 0x02::little-16, roam_pref::little-16, rest::binary>>
+       ) do
+    tlvs
+    |> Map.put(:roaming_preference, parse_roaming_preference(roam_pref))
+    |> do_parse_get_system_selection_preference(rest)
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<0x16, 0x01::little-16, network_selection_pref, rest::binary>>
+       ) do
+    tlvs
+    |> Map.put(
+      :network_selection_preference,
+      parse_network_selection_preference(network_selection_pref)
+    )
+    |> do_parse_get_system_selection_preference(rest)
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<0x1C, _size::16, number_or_rats, rat_acquisition_order::binary-size(number_or_rats),
+           rest::binary>>
+       ) do
+    rat_acquisition_order_list =
+      rat_acquisition_order |> :erlang.binary_to_list() |> Enum.map(&radio_interface/1)
+
+    tlvs
+    |> Map.put(:acquisition_order, rat_acquisition_order_list)
+    |> do_parse_get_system_selection_preference(rest)
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<0x1D, 0x04::little-16, registration_restriction::little-32, rest::binary>>
+       ) do
+    tlvs
+    |> Map.put(
+      :registration_restriction,
+      parse_registration_restriction(registration_restriction)
+    )
+    |> do_parse_get_system_selection_preference(rest)
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<0x1F, 0x04::little-16, setting::little-32, rest::binary>>
+       ) do
+    tlvs
+    |> Map.put(:usage_setting, parse_usage_setting(setting))
+    |> do_parse_get_system_selection_preference(rest)
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<0x20, 0x04::little-16, domain_pref::little-32, rest::binary>>
+       ) do
+    tlvs
+    |> Map.put(:void_domain_preference, parse_voice_domain_preference(domain_pref))
+    |> do_parse_get_system_selection_preference(rest)
+  end
+
+  defp do_parse_get_system_selection_preference(
+         tlvs,
+         <<_type, size::little-16, _tlvs::binary-size(size), rest::binary>>
+       ) do
+    do_parse_get_system_selection_preference(tlvs, rest)
+  end
+
+  defp parse_registration_restriction(0x00), do: :unrestricted
+  defp parse_registration_restriction(0x01), do: :camped_only
+  defp parse_registration_restriction(0x02), do: :limited
+  defp parse_registration_restriction(byte), do: byte
+
+  defp parse_usage_setting(0), do: :unknown
+  defp parse_usage_setting(1), do: :voice_centric
+  defp parse_usage_setting(2), do: :data_centric
+
+  defp parse_voice_domain_preference(0x00), do: :cs_only
+  defp parse_voice_domain_preference(0x01), do: :ps_only
+  defp parse_voice_domain_preference(0x02), do: :cs_preferred
+  defp parse_voice_domain_preference(0x03), do: :ps_preferred
+
+  defp parse_emergency_mode(0x00), do: :off
+  defp parse_emergency_mode(0x01), do: :on
+
+  defp parse_roaming_preference(0x01), do: :off
+  defp parse_roaming_preference(0x02), do: :not_off
+  defp parse_roaming_preference(0x03), do: :not_flashing
+  defp parse_roaming_preference(0xFF), do: :any
+
+  defp parse_network_selection_preference(0x00), do: :automatic
+  defp parse_network_selection_preference(0x01), do: :manual
+
+  @doc """
+  Generate the `QMI.request()` for setting system selection preferences
+  """
+  @spec set_system_selection_preference([set_system_selection_preference_opt()]) :: QMI.request()
+  def set_system_selection_preference(opts \\ []) do
+    {tlvs, size} = make_tlvs(opts)
+    payload = [<<@set_system_selection_preference::little-16, size::little-16>>, tlvs]
+
+    %{
+      service_id: @network_access_service_id,
+      payload: payload,
+      decode: &parse_set_system_selection_preference/1
+    }
+  end
+
+  defp make_tlvs(opts) do
+    opts = Keyword.put_new(opts, :change_duration, :permanent)
+
+    do_make_tlvs(opts, [], 0)
+  end
+
+  defp do_make_tlvs([], tlvs, bytes), do: {tlvs, bytes}
+
+  defp do_make_tlvs([{:change_duration, :permanent} | rest], tlvs, bytes) do
+    tlv = <<0x17, 0x01::little-16, 0x01>>
+
+    do_make_tlvs(rest, tlvs ++ [tlv], bytes + 4)
+  end
+
+  defp do_make_tlvs([{:change_duration, :power_cycle} | rest], tlvs, bytes) do
+    tlv = <<0x17, 0x01::little-16, 0x00>>
+
+    do_make_tlvs(rest, tlvs ++ [tlv], bytes + 4)
+  end
+
+  defp do_make_tlvs([{:mode_preference, radio_techs} | rest], tlvs, bytes) do
+    radio_techs_mask =
+      Enum.reduce(radio_techs, 0x00, fn
+        :cdma_1x, mask -> mask ||| 0x01
+        :cdma_1x_hrdp, mask -> mask ||| 0x02
+        :gsm, mask -> mask ||| 0x04
+        :umts, mask -> mask ||| 0x08
+        :lte, mask -> mask ||| 0x10
+        :td_scdma, mask -> mask ||| 0x20
+        _other, mask -> mask
+      end)
+
+    tlv = <<0x11, 0x02::little-16, radio_techs_mask::little-16>>
+
+    do_make_tlvs(rest, tlvs ++ [tlv], bytes + 5)
+  end
+
+  defp parse_set_system_selection_preference(
+         <<@set_system_selection_preference::little-16, _rest::binary>>
+       ) do
+    :ok
+  end
 
   @doc """
   Make the request for getting the home network
