@@ -32,4 +32,26 @@ defmodule QMI.NetworkAccess do
     Codec.NetworkAccess.get_rf_band_info()
     |> QMI.call(qmi)
   end
+
+  @doc """
+  Get the system selection preferences
+  """
+  @spec get_system_selection_preference(QMI.name()) ::
+          {:ok, Codec.NetworkAccess.get_system_selection_preference_response()} | {:error, atom()}
+  def get_system_selection_preference(qmi) do
+    Codec.NetworkAccess.get_system_selection_preference()
+    |> QMI.call(qmi)
+  end
+
+  @doc """
+  Set the system selection preferences
+  """
+  @spec set_system_selection_preference(QMI.name(), [
+          Codec.NetworkAccess.set_system_selection_preference_opt()
+        ]) :: :ok | {:error, atom()}
+  def set_system_selection_preference(qmi, opts \\ []) do
+    opts
+    |> Codec.NetworkAccess.set_system_selection_preference()
+    |> QMI.call(qmi)
+  end
 end
