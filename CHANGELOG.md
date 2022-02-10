@@ -3,6 +3,23 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.3] - 2021-02-10
+
+### Added
+
+Support for getting and setting modem operating mode and support for getting
+and setting configuration for the modem's radio technology preference.
+
+* `QMI.DeviceManagement.get_operating_mode/1` (@jjcarstens)
+* `QMI.DeviceManagement.set_operating_mode/2` (@jjcarstens)
+* `QMI.Codec.DeviceManagement.get_operating_mode/0` (@jjcarstens)
+* `QMI.Codec.DeviceManagement.set_operating_mode/1` (@jjcarstens)
+* `QMI.NetworkAccess.get_system_selection_preference/1`
+* `QMI.NetworkAccess.set_system_selection_preference/2`
+* `QMI.Codec.NetworkAccess.get_system_selection_preference/0`
+* `QMI.Codec.NetworkAccess.set_system_selection_preference/1`
+
+
 ## [v0.8.2] - 2021-10-21
 
 ### Added
@@ -148,6 +165,7 @@ Major refactor
 
 Initial release
 
+[v0.8.3]: https://github.com/nerves-networking/qmi/compare/v0.8.2...v0.8.3
 [v0.8.2]: https://github.com/nerves-networking/qmi/compare/v0.8.1...v0.8.2
 [v0.8.1]: https://github.com/nerves-networking/qmi/compare/v0.8.0...v0.8.1
 [v0.8.0]: https://github.com/nerves-networking/qmi/compare/v0.7.1...v0.8.0
