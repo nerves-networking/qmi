@@ -96,4 +96,67 @@ defmodule QMI.Codec.DeviceManagementTest do
       assert serial_numbers.imeisv_svn == <<0x01>>
     end
   end
+
+  describe "get_operating_mode/0" do
+    test "operating mode" do
+      %{decode: decode} = DeviceManagement.get_operating_mode()
+
+      base = <<0x002D::16-little, 11::16-little, 2, 4, 0, 0, 0, 0, 0, 1, 1::16-little>>
+
+      assert {:ok, %{operating_mode: :online}} = decode.(base <> <<0x00>>)
+      assert {:ok, %{operating_mode: :low_power}} = decode.(base <> <<0x01>>)
+      assert {:ok, %{operating_mode: :factory_test}} = decode.(base <> <<0x02>>)
+      assert {:ok, %{operating_mode: :offline}} = decode.(base <> <<0x03>>)
+      assert {:ok, %{operating_mode: :resetting}} = decode.(base <> <<0x04>>)
+      assert {:ok, %{operating_mode: :shutting_down}} = decode.(base <> <<0x05>>)
+      assert {:ok, %{operating_mode: :persistent_low_power}} = decode.(base <> <<0x06>>)
+      assert {:ok, %{operating_mode: :mode_only_low_power}} = decode.(base <> <<0x07>>)
+      assert {:ok, %{operating_mode: :network_test_gw}} = decode.(base <> <<0x08>>)
+    end
+
+    test "offline reason" do
+      %{decode: decode} = DeviceManagement.get_operating_mode()
+
+      # offline operating mode
+      base =
+        <<0x002D::16-little, 11::16-little, 2, 4, 0, 0, 0, 0, 0, 1, 1::16-little, 3, 0x10,
+          2::16-little>>
+
+      assert {:ok, %{offline_reason: :host_image_misconfiguration}} =
+               decode.(base <> <<0x001::16-little>>)
+
+      assert {:ok, %{offline_reason: :pri_image_misconfiguration}} =
+               decode.(base <> <<0x02::16-little>>)
+
+      assert {:ok, %{offline_reason: :pri_version_incompatible}} =
+               decode.(base <> <<0x04::16-little>>)
+
+      assert {:ok, %{offline_reason: :device_memory_full}} = decode.(base <> <<0x08::16-little>>)
+    end
+
+    test "hardware controlled mode" do
+      %{decode: decode} = DeviceManagement.get_operating_mode()
+
+      base =
+        <<0x002D::16-little, 11::16-little, 2, 4, 0, 0, 0, 0, 0, 1, 1::16-little, 1, 0x11,
+          1::16-little>>
+
+      assert {:ok, %{hardware_controlled_mode?: true}} = decode.(base <> <<1>>)
+      assert {:ok, %{hardware_controlled_mode?: false}} = decode.(base <> <<0>>)
+      assert {:ok, %{hardware_controlled_mode?: false}} = decode.(base <> <<2>>)
+    end
+
+    test "multi part message" do
+      %{decode: decode} = DeviceManagement.get_operating_mode()
+
+      bin =
+        <<0x002D::16-little, 11::16-little, 2, 4, 0, 0, 0, 0, 0, 1, 1::16-little, 3, 0x10,
+          2::16-little, 8::16-little, 0x11, 1, 0, 1>>
+
+      {:ok, result} = decode.(bin)
+      assert result.operating_mode == :offline
+      assert result.offline_reason == :device_memory_full
+      assert result.hardware_controlled_mode?
+    end
+  end
 end

@@ -50,4 +50,24 @@ defmodule QMI.DeviceManagement do
     Codec.DeviceManagement.get_device_serial_numbers()
     |> QMI.call(qmi)
   end
+
+  @doc """
+  Get the operating mode
+  """
+  @spec get_operating_mode(QMI.name()) ::
+          {:ok, Codec.DeviceManagement.operating_mode_response()} | {:error, any}
+  def get_operating_mode(qmi) do
+    Codec.DeviceManagement.get_operating_mode()
+    |> QMI.call(qmi)
+  end
+
+  @doc """
+  Set the operating mode
+  """
+  @spec set_operating_mode(QMI.name(), Codec.DeviceManagement.operating_mode()) ::
+          :ok | {:error, any}
+  def set_operating_mode(qmi, mode) do
+    Codec.DeviceManagement.set_operating_mode(mode)
+    |> QMI.call(qmi)
+  end
 end
