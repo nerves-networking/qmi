@@ -8,6 +8,8 @@ defmodule QMI.Codec.DeviceManagement do
   @get_device_rev_id 0x0023
   @get_device_serial_numbers 0x0025
   @get_device_hardware_rev 0x002C
+  @get_operating_mode 0x002D
+  @set_operating_mode 0x002E
 
   @typedoc """
   The serial numbers assigned to the device
@@ -179,5 +181,94 @@ defmodule QMI.Codec.DeviceManagement do
          <<_type, length::16-little, _values::binary-size(length), rest::binary>>
        ) do
     parse_device_serial_numbers(serial_numbers, rest)
+  end
+
+  @operating_modes %{
+    0x00 => :online,
+    0x01 => :low_power,
+    0x02 => :factory_test,
+    0x03 => :offline,
+    0x04 => :resetting,
+    0x05 => :shutting_down,
+    0x06 => :persistent_low_power,
+    0x07 => :mode_only_low_power,
+    0x08 => :network_test_gw
+  }
+
+  @type operating_mode ::
+          :online
+          | :low_power
+          | :factory_test
+          | :offline
+          | :resetting
+          | :shutting_down
+          | :persistent_low_power
+          | :mode_only_low_power
+          | :network_test_gw
+  @type offline_reason ::
+          :host_image_misconfiguration
+          | :pri_image_misconfiguration
+          | :pri_version_incompatible
+          | :device_memory_full
+  @type operating_mode_response :: %{
+          required(:operating_mode) => operating_mode(),
+          optional(:offline_reason) => offline_reason(),
+          optional(:hardware_controlled_mode?) => boolean()
+        }
+
+  @doc """
+  Get the operating mode of a device
+  """
+  @spec get_operating_mode() :: QMI.request()
+  def get_operating_mode() do
+    %{
+      service_id: 0x02,
+      payload: <<@get_operating_mode::16-little, 0, 0>>,
+      decode: &parse_operating_mode(%{}, &1)
+    }
+  end
+
+  defp parse_operating_mode(
+         result,
+         <<@get_operating_mode::16-little, _size::16-little, _result_tlv::7*8, 1, 1::16-little,
+           mode_num, tlvs::binary>>
+       ) do
+    result
+    |> Map.put(:operating_mode, @operating_modes[mode_num])
+    |> parse_operating_mode(tlvs)
+  end
+
+  defp parse_operating_mode(result, <<0x10, 2::16-little, offline_num::16-little, rest::binary>>) do
+    offline_reason =
+      case offline_num do
+        0x0001 -> :host_image_misconfiguration
+        0x0002 -> :pri_image_misconfiguration
+        0x0004 -> :pri_version_incompatible
+        0x0008 -> :device_memory_full
+      end
+
+    Map.put(result, :offline_reason, offline_reason)
+    |> parse_operating_mode(rest)
+  end
+
+  defp parse_operating_mode(result, <<0x11, 1::16-little, hw_ctl_num, rest::binary>>) do
+    Map.put(result, :hardware_controlled_mode?, hw_ctl_num == 1)
+    |> parse_operating_mode(rest)
+  end
+
+  defp parse_operating_mode(result, <<>>), do: {:ok, result}
+
+  @doc """
+  Set operating mode of the device
+  """
+  @spec set_operating_mode(operating_mode()) :: QMI.request()
+  def set_operating_mode(mode) do
+    [mode_num] = for {i, ^mode} <- @operating_modes, do: i
+
+    %{
+      service_id: 0x02,
+      payload: <<@set_operating_mode::16-little, 4::16-little, 1, 1::16-little, mode_num>>,
+      decode: fn _ -> :ok end
+    }
   end
 end
