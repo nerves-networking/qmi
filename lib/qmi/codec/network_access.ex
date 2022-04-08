@@ -119,6 +119,8 @@ defmodule QMI.Codec.NetworkAccess do
   """
   @type set_system_selection_preference_opt() ::
           {:mode_preference, [radio_interface()]}
+          | {:acquisition_order, [radio_interface()]}
+          | {:roaming_preference, roaming_preference()}
           | {:change_duration, preference_change_duration()}
 
   @doc """
@@ -179,6 +181,15 @@ defmodule QMI.Codec.NetworkAccess do
   defp radio_interface(0x05), do: :umts
   defp radio_interface(0x08), do: :lte
   defp radio_interface(0x09), do: :td_scdma
+
+  defp encode_radio_interface(:no_service), do: 0x00
+  defp encode_radio_interface(:cdma_1x), do: 0x01
+  defp encode_radio_interface(:cmda_1x_evdo), do: 0x02
+  defp encode_radio_interface(:amps), do: 0x03
+  defp encode_radio_interface(:gsm), do: 0x04
+  defp encode_radio_interface(:umts), do: 0x05
+  defp encode_radio_interface(:lte), do: 0x08
+  defp encode_radio_interface(:td_schma), do: 0x09
 
   @typedoc """
   The roaming preference
@@ -416,6 +427,11 @@ defmodule QMI.Codec.NetworkAccess do
   defp parse_network_selection_preference(0x00), do: :automatic
   defp parse_network_selection_preference(0x01), do: :manual
 
+  def encode_roaming_preference(:off), do: 0x00
+  def encode_roaming_preference(:not_off), do: 0x02
+  def encode_roaming_preference(:not_flashing), do: 0x03
+  def encode_roaming_preference(:any), do: 0xFF
+
   @doc """
   Generate the `QMI.request()` for setting system selection preferences
   """
@@ -423,6 +439,9 @@ defmodule QMI.Codec.NetworkAccess do
   def set_system_selection_preference(opts \\ []) do
     {tlvs, size} = make_tlvs(opts)
     payload = [<<@set_system_selection_preference::little-16, size::little-16>>, tlvs]
+    require Logger
+
+    Logger.warn("#{inspect(payload)}")
 
     %{
       service_id: @network_access_service_id,
@@ -466,6 +485,26 @@ defmodule QMI.Codec.NetworkAccess do
     tlv = <<0x11, 0x02::little-16, radio_techs_mask::little-16>>
 
     do_make_tlvs(rest, tlvs ++ [tlv], bytes + 5)
+  end
+
+  defp do_make_tlvs([{:roaming_preference, preference} | rest], tlvs, bytes) do
+    tlv = <<0x14, 0x02::little-16, encode_roaming_preference(preference)::little-16>>
+
+    do_make_tlvs(rest, tlvs ++ [tlv], bytes + 5)
+  end
+
+  defp do_make_tlvs([{:acquisition_order, rat_order} | rest], tlvs, bytes) do
+    num_of_rats = length(rat_order)
+    size = 1 + num_of_rats
+
+    rat_order_bin =
+      rat_order
+      |> Enum.map(&encode_radio_interface/1)
+      |> :erlang.list_to_binary()
+
+    tlv = <<0x1E, size::little-16, num_of_rats, rat_order_bin::binary>>
+
+    do_make_tlvs(rest, tlvs ++ [tlv], bytes + byte_size(tlv))
   end
 
   defp parse_set_system_selection_preference(
