@@ -471,10 +471,6 @@ defmodule QMI.Codec.NetworkAccess do
   defp do_make_tlvs([{:roaming_preference, roaming_preference} | rest], tlvs, bytes) do
     roaming_byte = encode_roaming_preference(roaming_preference)
 
-    Logger.warn(
-      "[QMI] do_make_tlvs #{inspect({:roaming_preference, roaming_preference})} -> #{inspect(roaming_byte)}"
-    )
-
     tlv = <<0x14, 0x02::little-16, roaming_byte::little-16>>
     do_make_tlvs(rest, tlvs ++ [tlv], bytes + 5)
   end
