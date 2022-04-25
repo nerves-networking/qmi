@@ -22,7 +22,7 @@ defmodule QMI.Codec.WirelessData do
 
   * `:apn` - the name of our APN
   """
-  @type start_network_interface_opt() :: {:apn, String.t()}
+  @type start_network_interface_opt() :: {:apn, String.t()} | {:profile_3gpp_index, integer()}
 
   @typedoc """
   Report from starting the network interface
@@ -104,6 +104,11 @@ defmodule QMI.Codec.WirelessData do
     new_size = size + 3 + apn_size
     new_tlvs = [tlvs, <<0x14, apn_size::little-16>>, apn]
     make_tlvs(rest, new_tlvs, new_size)
+  end
+
+  defp make_tlvs([{:profile_3gpp_index, profile_index} | rest], tlvs, size) do
+    tlv = <<0x31, 0x01::little-16, profile_index>>
+    make_tlvs(rest, [tlvs, tlv], size + byte_size(tlv))
   end
 
   defp parse_start_network_interface_resp(

@@ -18,6 +18,14 @@ defmodule QMI.Codec.WirelessDataTest do
              {:ok, %{packet_data_handle: 0x01}}
   end
 
+  test "start_network_interface/1 with a 3GPP profile specified" do
+    request = WirelessData.start_network_interface(apn: "apn", profile_3gpp_index: 1)
+    bin = :erlang.iolist_to_binary(request.payload)
+
+    assert <<_header::4-unit(8), 0x14, 0x03::little-16, "apn"::binary, 0x31, 0x01::little-16,
+             0x01>> = bin
+  end
+
   describe "parsing packet status indication" do
     test "when connected" do
       binary = <<0x22, 0x00, 0x05, 0x00, 0x01, 0x02, 0x00, 0x02, 0x00>>
