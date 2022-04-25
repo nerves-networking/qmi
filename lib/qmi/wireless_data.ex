@@ -29,4 +29,15 @@ defmodule QMI.WirelessData do
     Codec.WirelessData.set_event_report(opts)
     |> QMI.call(qmi)
   end
+
+  @doc """
+  Modify a profile's settings to be used when starting an interface connection
+  """
+  @spec modify_profile_settings(QMI.name(), profile_index :: integer(), [
+          Codec.WirelessData.profile_setting()
+        ]) :: {:ok, map()} | {:error, atom()}
+  def modify_profile_settings(qmi, profile_index, settings) do
+    Codec.WirelessData.modify_profile_settings(profile_index, settings)
+    |> QMI.call(qmi)
+  end
 end
