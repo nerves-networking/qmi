@@ -3,6 +3,20 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.4] - 2021-04-25
+
+## Added
+
+* `QMI.WirelessData.modify_profile_settings/3` function
+* Can pass 3GPP profile index to `QMI.WirelessData.start_network_interface/2`
+* `:roaming_preference` option to
+  `QMI.NetworkAccess.set_system_selection_preference/2`
+* `QMI.Codec.WirelessData.modify_profile_settings/2` function
+* `QMI.Codec.WirelessData.profile_setting()` type
+* `QMI.Codec.WirelessData.profile_type()` type
+* `:profile_3gpp_index` option
+  `QMI.Codec.WirelessData.start_network_interface_opt()` type
+
 ## [v0.8.3] - 2021-02-10
 
 ### Added
@@ -165,6 +179,7 @@ Major refactor
 
 Initial release
 
+[v0.8.3]: https://github.com/nerves-networking/qmi/compare/v0.8.3...v0.8.4
 [v0.8.3]: https://github.com/nerves-networking/qmi/compare/v0.8.2...v0.8.3
 [v0.8.2]: https://github.com/nerves-networking/qmi/compare/v0.8.1...v0.8.2
 [v0.8.1]: https://github.com/nerves-networking/qmi/compare/v0.8.0...v0.8.1
