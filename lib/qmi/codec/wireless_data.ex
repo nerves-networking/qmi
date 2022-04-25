@@ -8,6 +8,7 @@ defmodule QMI.Codec.WirelessData do
   @event_report 0x0001
   @start_network_interface 0x0020
   @packet_service_status_ind 0x0022
+  @modify_profile_settings 0x0028
 
   # When a stat is configured to be reported but no data has been recorded
   # before the indication is sent, the value is `0xFFFFFFFF` which is treated as
@@ -485,5 +486,117 @@ defmodule QMI.Codec.WirelessData do
          <<@event_report::little-16, size::little-16, _values::binary-size(size)>>
        ) do
     :ok
+  end
+
+  @typedoc """
+  The profile technology type
+  """
+  @type profile_type() :: :profile_type_3gpp | :profile_type_3gpp2 | :profile_type_epc
+
+  @typedoc """
+  The profile settings
+
+  * `:roaming_disallowed` - if using roaming is allowed or not
+  * `:profile_type` - the profile type - see `profile_type()` type docs for more
+    information
+  """
+  @type profile_setting() :: {:roaming_disallowed, boolean()} | {:profile_type, profile_type()}
+
+  @typedoc """
+  Response from issuing a modify profile settings request
+  """
+  @type modify_profile_settings_response() :: %{extended_error_code: integer() | nil}
+
+  @doc """
+  Modify the QMI profile setting
+
+  When providing the profile settings if `:profile_type` is not included this
+  function will default to `:profile_type_3gpp`
+  """
+  @spec modify_profile_settings(profile_index :: integer(), [profile_setting()]) :: QMI.request()
+  def modify_profile_settings(index, settings) do
+    profile_type = settings[:profile_type] || :profile_type_3gpp
+    settings = Keyword.put(settings, :profile_info, {index, profile_type})
+
+    {tlvs, tlvs_byte_size} = make_modify_profile_settings_tlvs(settings, [], 0)
+
+    %{
+      service_id: 0x01,
+      payload: [
+        <<@modify_profile_settings::little-16, tlvs_byte_size::little-16>>,
+        tlvs
+      ],
+      decode: &parse_modify_profile_settings_resp/1
+    }
+  end
+
+  defp make_modify_profile_settings_tlvs([], encoded, total_size) do
+    {encoded, total_size}
+  end
+
+  defp make_modify_profile_settings_tlvs(
+         [{:profile_info, {profile_index, type}} | rest],
+         encoded,
+         size
+       ) do
+    type_byte = encode_profile_type(type)
+    encoded_tlv = <<0x01, 0x02::little-16, type_byte, profile_index>>
+
+    make_modify_profile_settings_tlvs(
+      rest,
+      encoded ++ [encoded_tlv],
+      size + byte_size(encoded_tlv)
+    )
+  end
+
+  defp make_modify_profile_settings_tlvs(
+         [{:roaming_disallowed, disallowed?} | rest],
+         encoded,
+         size
+       ) do
+    disallowed_byte = if disallowed?, do: 0x01, else: 0x00
+
+    tlvs = <<0x3E, 0x01::little-16, disallowed_byte>>
+
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlvs], size + byte_size(tlvs))
+  end
+
+  defp make_modify_profile_settings_tlvs([_unknown | rest], encoded, size) do
+    make_modify_profile_settings_tlvs(rest, encoded, size)
+  end
+
+  defp encode_profile_type(:profile_type_3gpp), do: 0x00
+  defp encode_profile_type(:profile_type_3gpp2), do: 0x01
+  defp encode_profile_type(:profile_type_epc), do: 0x02
+
+  defp parse_modify_profile_settings_resp(
+         <<@modify_profile_settings::little-16, size::little-16, values::binary-size(size)>>
+       ) do
+    result = parse_profile_settings_resp_tlvs(values, %{extended_error_code: nil})
+    {:ok, result}
+  end
+
+  defp parse_profile_settings_resp_tlvs(<<>>, parsed) do
+    parsed
+  end
+
+  defp parse_profile_settings_resp_tlvs(<<0>>, parsed) do
+    parsed
+  end
+
+  defp parse_profile_settings_resp_tlvs(
+         <<0xE0, 0x02::little-16, code::little-16, rest::binary>>,
+         parsed
+       ) do
+    parsed = Map.put(parsed, :extended_error_code, code)
+
+    parse_profile_settings_resp_tlvs(rest, parsed)
+  end
+
+  defp parse_profile_settings_resp_tlvs(
+         <<_type, len::little, _value::binary-size(len), rest::binary>>,
+         parsed
+       ) do
+    parse_profile_settings_resp_tlvs(rest, parsed)
   end
 end

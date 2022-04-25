@@ -309,4 +309,48 @@ defmodule QMI.Codec.WirelessDataTest do
             }} ==
              WirelessData.parse_indication(binary)
   end
+
+  describe "modifying profile" do
+    test "roaming is allowed" do
+      request = WirelessData.modify_profile_settings(0x01, roaming_disallowed: false)
+      bin = :erlang.iolist_to_binary(request.payload)
+
+      assert <<_header::4-unit(8), 0x01, 0x02::little-16, 0x00, 01, 0x3E, 0x01::little-16, 0x00>> =
+               bin
+    end
+
+    test "roaming is not allowed" do
+      request = WirelessData.modify_profile_settings(0x01, roaming_disallowed: true)
+      bin = :erlang.iolist_to_binary(request.payload)
+
+      assert <<_header::4-unit(8), 0x01, 0x02::little-16, 0x00, 01, 0x3E, 0x01::little-16, 0x01>> =
+               bin
+    end
+
+    test "can handle 3gpp2 profile type" do
+      request =
+        WirelessData.modify_profile_settings(0x01,
+          roaming_disallowed: false,
+          profile_type: :profile_type_3gpp2
+        )
+
+      bin = :erlang.iolist_to_binary(request.payload)
+
+      assert <<_header::4-unit(8), 0x01, 0x02::little-16, 0x01, 01, 0x3E, 0x01::little-16, 0x00>> =
+               bin
+    end
+
+    test "can handle EPC profile type" do
+      request =
+        WirelessData.modify_profile_settings(0x01,
+          roaming_disallowed: false,
+          profile_type: :profile_type_epc
+        )
+
+      bin = :erlang.iolist_to_binary(request.payload)
+
+      assert <<_header::4-unit(8), 0x01, 0x02::little-16, 0x02, 01, 0x3E, 0x01::little-16, 0x00>> =
+               bin
+    end
+  end
 end
