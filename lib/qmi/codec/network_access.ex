@@ -116,10 +116,12 @@ defmodule QMI.Codec.NetworkAccess do
   * `:mode_preference` - which radio access technologies should the modem use
   * `:change_duration` - the `preference_change_duration()` for the applied
     settings. The default is `:permanent`.
+  * `:roaming_preference` - the preferred roaming setting
   """
   @type set_system_selection_preference_opt() ::
           {:mode_preference, [radio_interface()]}
           | {:change_duration, preference_change_duration()}
+          | {:roaming_preference, roaming_preference()}
 
   @doc """
   Make the `QMI.request()` for getting signal strength
