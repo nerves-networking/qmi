@@ -11,7 +11,7 @@ defmodule QMI.MixProject do
       description: description(),
       package: package(),
       source_url: @source_url,
-      elixir: "~> 1.10",
+      elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
       compilers: [:elixir_make | Mix.compilers()],
       make_targets: ["all"],
