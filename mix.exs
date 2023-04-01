@@ -18,7 +18,7 @@ defmodule QMI.MixProject do
       make_clean: ["mix_clean"],
       deps: deps(),
       dialyzer: [
-        flags: [:unmatched_returns, :error_handling, :race_conditions, :underspecs]
+        flags: [:missing_return, :extra_return, :unmatched_returns, :error_handling, :underspecs]
       ],
       docs: docs(),
       package: package(),
