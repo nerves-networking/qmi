@@ -3,9 +3,17 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.8.4] - 2021-04-25
+## [v0.8.5] - 2023-04-01
 
-## Added
+### Fixes
+
+* Fixed incorrect enum value for serving system registration state reports. This
+  could cause crashes if the value 3 (registration denied) was received.
+* Fixed spelling of `:fw_update_discontinuous_frame`
+
+## [v0.8.4] - 2022-04-25
+
+### Added
 
 * `QMI.WirelessData.modify_profile_settings/3` function
 * Can pass 3GPP profile index to `QMI.WirelessData.start_network_interface/2`
@@ -17,7 +25,7 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * `:profile_3gpp_index` option
   `QMI.Codec.WirelessData.start_network_interface_opt()` type
 
-## [v0.8.3] - 2021-02-10
+## [v0.8.3] - 2022-02-10
 
 ### Added
 
