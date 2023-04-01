@@ -737,7 +737,8 @@ defmodule QMI.Codec.NetworkAccess do
 
   defp serving_system_registration_state(0x00), do: :not_registered
   defp serving_system_registration_state(0x01), do: :registered
-  defp serving_system_registration_state(0x02), do: :registration_denied
+  defp serving_system_registration_state(0x02), do: :not_registered_searching
+  defp serving_system_registration_state(0x03), do: :registration_denied
   defp serving_system_registration_state(0x04), do: :registration_unknown
 
   defp serving_system_attach_state(0x00), do: :unknown
