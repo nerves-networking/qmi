@@ -68,7 +68,7 @@ defmodule QMI.Codec.WirelessData do
   The indication for the wireless data service's event report
 
   To configure what information is sent through this indication see
-  set_event_report/1`.
+  `set_event_report/1`.
   """
   @type event_report_indication() :: %{
           required(:name) => :event_report_indication,
