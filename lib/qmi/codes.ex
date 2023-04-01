@@ -238,8 +238,8 @@ defmodule QMI.Codes do
     0x0189 => :fw_cannot_generic_image,
     # QMI_ERR_FW_FILE_OPEN_FAILED
     0x0190 => :fw_file_open_failed,
-    # QMI_ERR_FW_UPDATE_DISCONTINOUS_FRAME
-    0x0191 => :fw_update_discontinous_frame,
+    # QMI_ERR_FW_UPDATE_DISCONTINUOUS_FRAME
+    0x0191 => :fw_update_discontinuous_frame,
     # QMI_ERR_FW_UPDATE_FAILED
     0x0192 => :fw_update_failed
   }
