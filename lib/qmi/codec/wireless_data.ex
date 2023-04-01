@@ -479,7 +479,7 @@ defmodule QMI.Codec.WirelessData do
     end
   end
 
-  @spec stat_to_integer(statistic_measurement()) :: non_neg_integer()
+  @spec stat_to_integer(statistic_measurement()) :: 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512
   def stat_to_integer(:tx_packets), do: 0x01
   def stat_to_integer(:rx_packets), do: 0x02
   def stat_to_integer(:tx_errors), do: 0x04

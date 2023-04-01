@@ -42,8 +42,7 @@ defmodule QMI.Driver do
   @doc """
   Send a message and return the response
   """
-  @spec call(GenServer.server(), non_neg_integer(), QMI.request(), keyword()) ::
-          :ok | {:ok, any()} | {:error, atom()}
+  @spec call(GenServer.server(), non_neg_integer(), QMI.request(), keyword()) :: any()
   def call(qmi, client_id, request, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, 5_000)
 
