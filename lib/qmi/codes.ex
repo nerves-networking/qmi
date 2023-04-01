@@ -244,12 +244,14 @@ defmodule QMI.Codes do
     0x0192 => :fw_update_failed
   }
 
+  @spec decode_error_code(non_neg_integer()) :: atom()
   def decode_error_code(code) when is_integer(code) do
     @error_codes[code] || :unknown
   end
 
   def decode_error_code(code) when is_atom(code), do: code
 
+  @spec decode_result_code(non_neg_integer()) :: :success | :failure | :unknown
   def decode_result_code(code) when is_integer(code) do
     case code do
       0 -> :success

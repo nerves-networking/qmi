@@ -1,7 +1,6 @@
 defmodule QMI.ClientIDCache do
-  use GenServer
-
   @moduledoc false
+  use GenServer
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(init_args) do

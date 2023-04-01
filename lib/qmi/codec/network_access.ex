@@ -2,9 +2,9 @@ defmodule QMI.Codec.NetworkAccess do
   @moduledoc """
   Codec for making network access service requests
   """
-  require Logger
-
   import Bitwise
+
+  require Logger
 
   @network_access_service_id 0x03
 

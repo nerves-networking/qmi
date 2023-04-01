@@ -1,10 +1,13 @@
-# config/.credo.exs
+# .credo.exs
 %{
   configs: [
     %{
       name: "default",
       checks: [
-        {Credo.Check.Readability.ParenthesesOnZeroArityDefs, parens: true}
+        {Credo.Check.Design.AliasUsage, false},
+        {Credo.Check.Readability.ParenthesesOnZeroArityDefs, parens: true},
+        {Credo.Check.Readability.Specs, tags: []},
+        {Credo.Check.Readability.StrictModuleLayout, tags: []}
       ]
     }
   ]

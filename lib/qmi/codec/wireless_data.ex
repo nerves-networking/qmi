@@ -271,6 +271,8 @@ defmodule QMI.Codec.WirelessData do
   defp parse_call_end_reason_type(0x09), do: :ipv6
   defp parse_call_end_reason_type(0x0C), do: :handoff
 
+  @spec parse_event_report_indication(event_report_indication(), binary()) ::
+          event_report_indication()
   def parse_event_report_indication(event_report_indication, <<>>), do: event_report_indication
 
   def parse_event_report_indication(
@@ -465,6 +467,7 @@ defmodule QMI.Codec.WirelessData do
     end
   end
 
+  @spec statistics_mask(:all | [statistic_measurement()]) :: non_neg_integer()
   def statistics_mask(:all) do
     0x03FF
   end
@@ -476,6 +479,7 @@ defmodule QMI.Codec.WirelessData do
     end
   end
 
+  @spec stat_to_integer(statistic_measurement()) :: non_neg_integer()
   def stat_to_integer(:tx_packets), do: 0x01
   def stat_to_integer(:rx_packets), do: 0x02
   def stat_to_integer(:tx_errors), do: 0x04
