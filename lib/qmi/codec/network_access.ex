@@ -67,7 +67,7 @@ defmodule QMI.Codec.NetworkAccess do
   * `:serving_system_cs_attach_state` - the circuit-switched domain attach state
   * `:serving_system_ps_attach_state` - the packet-switched domain attach state
   * `:serving_system_selected_network` - the type of selected radio access network
-  * `:serving_system_radio_interfaces` - a list of raido interfaces currently in use
+  * `:serving_system_radio_interfaces` - a list of radio interfaces currently in use
 
   Optional fields:
 
