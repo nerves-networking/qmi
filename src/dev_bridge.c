@@ -83,7 +83,7 @@ static void report_failure(int errnum)
     exit(EXIT_FAILURE);
 }
 
-static void handle_device_ready()
+static void handle_device_ready(void)
 {
     uint8_t *buffer = eframer_tx_buffer(&framer);
 
@@ -206,4 +206,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
