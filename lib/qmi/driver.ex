@@ -84,7 +84,7 @@ defmodule QMI.Driver do
         handle_report(message, state)
 
       {:error, _reason} ->
-        Logger.warn(
+        Logger.warning(
           "[QMI.Driver] #{state.device_path} invalid message from QMI: #{inspect(data)}"
         )
 
@@ -158,7 +158,7 @@ defmodule QMI.Driver do
         :ok = run_callback_fun(indication, state)
 
       {:error, _} ->
-        Logger.warn("QMI: Unknown indication: #{inspect(msg, limit: :infinity)}")
+        Logger.warning("QMI: Unknown indication: #{inspect(msg, limit: :infinity)}")
     end
 
     {:noreply, state}
@@ -173,7 +173,7 @@ defmodule QMI.Driver do
         result = msg.message |> request.decode.()
 
         if match?({:error, _reason}, result) do
-          Logger.warn(
+          Logger.warning(
             "QMI: Error decoding response to #{inspect(request)}: message was #{inspect(msg.message, limit: :infinity)}"
           )
         end
@@ -181,7 +181,9 @@ defmodule QMI.Driver do
         GenServer.reply(from, result)
 
       nil ->
-        Logger.warn("QMI: Ignoring response for unknown transaction: #{inspect(transaction_id)}")
+        Logger.warning(
+          "QMI: Ignoring response for unknown transaction: #{inspect(transaction_id)}"
+        )
     end
 
     {:noreply, %{state | transactions: transactions}}
