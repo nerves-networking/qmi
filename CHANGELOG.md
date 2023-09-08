@@ -3,6 +3,13 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.6] - 2021-09-08
+
+## Changed
+
+* Fix Elixir and C compilation warnings
+* Improved specs
+
 ## [v0.8.5] - 2023-04-01
 
 ### Fixes
@@ -187,7 +194,9 @@ Major refactor
 
 Initial release
 
-[v0.8.3]: https://github.com/nerves-networking/qmi/compare/v0.8.3...v0.8.4
+[v0.8.6]: https://github.com/nerves-networking/qmi/compare/v0.8.5...v0.8.6
+[v0.8.5]: https://github.com/nerves-networking/qmi/compare/v0.8.4...v0.8.5
+[v0.8.4]: https://github.com/nerves-networking/qmi/compare/v0.8.3...v0.8.4
 [v0.8.3]: https://github.com/nerves-networking/qmi/compare/v0.8.2...v0.8.3
 [v0.8.2]: https://github.com/nerves-networking/qmi/compare/v0.8.1...v0.8.2
 [v0.8.1]: https://github.com/nerves-networking/qmi/compare/v0.8.0...v0.8.1

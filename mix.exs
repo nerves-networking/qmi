@@ -1,7 +1,7 @@
 defmodule QMI.MixProject do
   use Mix.Project
 
-  @version "0.8.5"
+  @version "0.8.6"
   @source_url "https://github.com/nerves-networking/qmi"
 
   def project do
