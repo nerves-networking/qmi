@@ -28,7 +28,7 @@ defmodule QMI.Codec.UserIdentity do
 
     %{
       service_id: 0x0B,
-      payload: [<<@read_transparent::16-little, size::16-little>>, tlvs],
+      payload: [<<@read_transparent::little-16, size::little-16>>, tlvs],
       decode: &parse/1
     }
   end
@@ -38,14 +38,14 @@ defmodule QMI.Codec.UserIdentity do
   end
 
   defp file_id_tlv(file_id, file_path) do
-    <<0x02, 0x05, 0x00, file_id::16-little, 0x02, file_path::16-little>>
+    <<0x02, 0x05, 0x00, file_id::little-16, 0x02, file_path::little-16>>
   end
 
   defp read_info_tlv() do
     <<0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00>>
   end
 
-  defp parse(<<@read_transparent::16-little, size::16-little, tlvs::size(size)-binary>>) do
+  defp parse(<<@read_transparent::little-16, size::little-16, tlvs::binary-size(size)>>) do
     %{sw1_result_code: nil, sw2_result_code: nil, read_result: nil}
     |> parse_tlvs(tlvs)
   end
@@ -60,7 +60,7 @@ defmodule QMI.Codec.UserIdentity do
 
   defp parse_tlvs(
          result,
-         <<0x11, _size::16-little, content_len::16-little, bytes::size(content_len)-binary,
+         <<0x11, _size::little-16, content_len::little-16, bytes::binary-size(content_len),
            rest::binary>>
        ) do
     result
@@ -68,14 +68,14 @@ defmodule QMI.Codec.UserIdentity do
     |> parse_tlvs(rest)
   end
 
-  defp parse_tlvs(result, <<0x10, 0x02::16-little, sw1_code, sw2_code, rest::binary>>) do
+  defp parse_tlvs(result, <<0x10, 0x02::little-16, sw1_code, sw2_code, rest::binary>>) do
     result
     |> Map.put(:sw1_result_code, sw1_code)
     |> Map.put(:sw2_result_code, sw2_code)
     |> parse_tlvs(rest)
   end
 
-  defp parse_tlvs(result, <<_type, size::16-little, _values::size(size)-binary, rest::binary>>) do
+  defp parse_tlvs(result, <<_type, size::little-16, _values::binary-size(size), rest::binary>>) do
     parse_tlvs(result, rest)
   end
 end

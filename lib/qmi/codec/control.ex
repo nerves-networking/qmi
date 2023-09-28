@@ -24,7 +24,7 @@ defmodule QMI.Codec.Control do
   end
 
   defp parse_get_client_id_response(
-         <<@get_client_id::little-16, size::little-16, tlvs::size(size)-binary>>
+         <<@get_client_id::little-16, size::little-16, tlvs::binary-size(size)>>
        ) do
     parse_get_client_id_tlvs(tlvs)
   end
@@ -42,7 +42,7 @@ defmodule QMI.Codec.Control do
   end
 
   defp parse_get_client_id_tlvs(
-         <<_type, size::little-16, _values::size(size)-binary, rest::binary>>
+         <<_type, size::little-16, _values::binary-size(size), rest::binary>>
        ) do
     parse_get_client_id_tlvs(rest)
   end
@@ -62,7 +62,7 @@ defmodule QMI.Codec.Control do
   end
 
   defp parse_release_client_id_response(
-         <<@release_client_id::little-16, size::little-16, values::size(size)-binary>>,
+         <<@release_client_id::little-16, size::little-16, values::binary-size(size)>>,
          expected_service_id,
          expected_client_id
        ) do
@@ -83,7 +83,7 @@ defmodule QMI.Codec.Control do
   end
 
   defp parse_release_client_id_tlvs(
-         <<_type, size::little-16, _values::size(size)-binary, rest::binary>>
+         <<_type, size::little-16, _values::binary-size(size), rest::binary>>
        ) do
     parse_release_client_id_tlvs(rest)
   end

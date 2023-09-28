@@ -45,7 +45,7 @@ defmodule QMI.Codec.DeviceManagement do
   def get_device_mfr() do
     %{
       service_id: 0x02,
-      payload: [<<@get_device_mfr::16-little, 0, 0>>],
+      payload: [<<@get_device_mfr::little-16, 0, 0>>],
       decode: &parse_get_device_mfr/1
     }
   end
@@ -75,27 +75,27 @@ defmodule QMI.Codec.DeviceManagement do
   end
 
   defp parse_get_device_hardware_rev(
-         <<@get_device_hardware_rev::16-little, _size::16-little, _result_tlv::7*8, 1,
-           len::16-little, hardware_rev::size(len)-binary>>
+         <<@get_device_hardware_rev::little-16, _size::little-16, _result_tlv::7*8, 1,
+           len::little-16, hardware_rev::binary-size(len)>>
        ) do
     {:ok, hardware_rev}
   end
 
   defp parse_get_device_mfr(
-         <<@get_device_mfr::16-little, _size::16-little, _result_tlv::7*8, 1, len::16-little,
-           mfr::size(len)-binary>>
+         <<@get_device_mfr::little-16, _size::little-16, _result_tlv::7*8, 1, len::little-16,
+           mfr::binary-size(len)>>
        ) do
     {:ok, mfr}
   end
 
   defp parse_get_device_model_id(
-         <<@get_device_model_id::16-little, _size::16-little, _result_tlv::7*8, 1, len::16-little,
-           model::size(len)-binary>>
+         <<@get_device_model_id::little-16, _size::little-16, _result_tlv::7*8, 1, len::little-16,
+           model::binary-size(len)>>
        ) do
     {:ok, model}
   end
 
-  defp parse_get_device_rev_id(<<@get_device_rev_id::16-little, _size::16-little, tlvs::binary>>) do
+  defp parse_get_device_rev_id(<<@get_device_rev_id::little-16, _size::little-16, tlvs::binary>>) do
     parse_firmware_rev_id(tlvs)
   end
 
@@ -105,11 +105,11 @@ defmodule QMI.Codec.DeviceManagement do
     {:error, :unexpected_response}
   end
 
-  defp parse_firmware_rev_id(<<0x01, size::16-little, rev_id::size(size)-binary, _rest::binary>>) do
+  defp parse_firmware_rev_id(<<0x01, size::little-16, rev_id::binary-size(size), _rest::binary>>) do
     {:ok, rev_id}
   end
 
-  defp parse_firmware_rev_id(<<_type, size::16-little, _values::size(size)-binary, rest::binary>>) do
+  defp parse_firmware_rev_id(<<_type, size::little-16, _values::binary-size(size), rest::binary>>) do
     parse_firmware_rev_id(rest)
   end
 
@@ -120,13 +120,13 @@ defmodule QMI.Codec.DeviceManagement do
   def get_device_serial_numbers() do
     %{
       service_id: 0x02,
-      payload: [<<@get_device_serial_numbers::16-little>>, 0x00, 0x00],
+      payload: [<<@get_device_serial_numbers::little-16>>, 0x00, 0x00],
       decode: &parse_device_serial_numbers/1
     }
   end
 
   defp parse_device_serial_numbers(
-         <<@get_device_serial_numbers::16-little, _size::16-little, tlvs::binary>>
+         <<@get_device_serial_numbers::little-16, _size::little-16, tlvs::binary>>
        ) do
     serial_numbers = %{
       esn: nil,
@@ -142,7 +142,7 @@ defmodule QMI.Codec.DeviceManagement do
 
   defp parse_device_serial_numbers(
          serial_numbers,
-         <<0x10, length::16-little, esn::binary-size(length), rest::binary>>
+         <<0x10, length::little-16, esn::binary-size(length), rest::binary>>
        ) do
     serial_numbers
     |> Map.put(:esn, esn)
@@ -151,7 +151,7 @@ defmodule QMI.Codec.DeviceManagement do
 
   defp parse_device_serial_numbers(
          serial_numbers,
-         <<0x11, length::16-little, imei::binary-size(length), rest::binary>>
+         <<0x11, length::little-16, imei::binary-size(length), rest::binary>>
        ) do
     serial_numbers
     |> Map.put(:imei, imei)
@@ -160,7 +160,7 @@ defmodule QMI.Codec.DeviceManagement do
 
   defp parse_device_serial_numbers(
          serial_numbers,
-         <<0x12, length::16-little, meid::binary-size(length), rest::binary>>
+         <<0x12, length::little-16, meid::binary-size(length), rest::binary>>
        ) do
     serial_numbers
     |> Map.put(:meid, meid)
@@ -169,7 +169,7 @@ defmodule QMI.Codec.DeviceManagement do
 
   defp parse_device_serial_numbers(
          serial_numbers,
-         <<0x13, length::16-little, imeisv_svn::binary-size(length), rest::binary>>
+         <<0x13, length::little-16, imeisv_svn::binary-size(length), rest::binary>>
        ) do
     serial_numbers
     |> Map.put(:imeisv_svn, imeisv_svn)
@@ -178,7 +178,7 @@ defmodule QMI.Codec.DeviceManagement do
 
   defp parse_device_serial_numbers(
          serial_numbers,
-         <<_type, length::16-little, _values::binary-size(length), rest::binary>>
+         <<_type, length::little-16, _values::binary-size(length), rest::binary>>
        ) do
     parse_device_serial_numbers(serial_numbers, rest)
   end
@@ -230,7 +230,7 @@ defmodule QMI.Codec.DeviceManagement do
 
   defp parse_operating_mode(
          result,
-         <<@get_operating_mode::16-little, _size::16-little, _result_tlv::7*8, 1, 1::16-little,
+         <<@get_operating_mode::16-little, _size::little-16, _result_tlv::7*8, 1, 1::little-16,
            mode_num, tlvs::binary>>
        ) do
     result
@@ -238,7 +238,7 @@ defmodule QMI.Codec.DeviceManagement do
     |> parse_operating_mode(tlvs)
   end
 
-  defp parse_operating_mode(result, <<0x10, 2::16-little, offline_num::16-little, rest::binary>>) do
+  defp parse_operating_mode(result, <<0x10, 2::16-little, offline_num::little-16, rest::binary>>) do
     offline_reason =
       case offline_num do
         0x0001 -> :host_image_misconfiguration
@@ -251,7 +251,7 @@ defmodule QMI.Codec.DeviceManagement do
     |> parse_operating_mode(rest)
   end
 
-  defp parse_operating_mode(result, <<0x11, 1::16-little, hw_ctl_num, rest::binary>>) do
+  defp parse_operating_mode(result, <<0x11, 1::little-16, hw_ctl_num, rest::binary>>) do
     Map.put(result, :hardware_controlled_mode?, hw_ctl_num == 1)
     |> parse_operating_mode(rest)
   end
@@ -267,7 +267,7 @@ defmodule QMI.Codec.DeviceManagement do
 
     %{
       service_id: 0x02,
-      payload: <<@set_operating_mode::16-little, 4::16-little, 1, 1::16-little, mode_num>>,
+      payload: <<@set_operating_mode::little-16, 4::little-16, 1, 1::little-16, mode_num>>,
       decode: fn _ -> :ok end
     }
   end

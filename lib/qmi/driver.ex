@@ -113,7 +113,7 @@ defmodule QMI.Driver do
     # Length needs to include the 2 length bytes as well
     len = IO.iodata_length(service_msg) + 2
 
-    qmux_msg = [<<1, len::16-little>>, service_msg]
+    qmux_msg = [<<1, len::little-16>>, service_msg]
 
     {:ok, _len} = DevBridge.write(state.bridge, qmux_msg)
 
@@ -122,7 +122,7 @@ defmodule QMI.Driver do
 
   defp make_service_msg(data, service, client_id, transaction, tran_size) do
     [
-      <<@request_flags, service, client_id, @request_type, transaction::size(tran_size)-little>>,
+      <<@request_flags, service, client_id, @request_type, transaction::little-size(tran_size)>>,
       data
     ]
   end
