@@ -48,7 +48,8 @@ defmodule QMI.MixProject do
       {:dialyxir, "~> 1.4.0", only: :lint, runtime: false},
       {:ex_doc, "~> 0.22", only: :docs, runtime: false},
       {:elixir_make, "~> 0.6", runtime: false},
-      {:credo, "~> 1.2", only: :lint, runtime: false}
+      {:credo, "~> 1.2", only: :lint, runtime: false},
+      {:credo_binary_patterns, "~> 0.2.2", only: :lint, runtime: false}
     ]
   end
 
