@@ -112,7 +112,7 @@ defmodule QMI.Codec.WirelessData do
   end
 
   defp parse_start_network_interface_resp(
-         <<@start_network_interface::little-16, size::little-16, tlvs::size(size)-binary>>
+         <<@start_network_interface::little-16, size::little-16, tlvs::binary-size(size)>>
        ) do
     {:ok, parse_start_network_interface_tlvs(%{}, tlvs)}
   end
@@ -136,7 +136,7 @@ defmodule QMI.Codec.WirelessData do
 
   defp parse_start_network_interface_tlvs(
          parsed,
-         <<_type, length::little-16, _values::size(length)-unit(8)-binary, rest::binary>>
+         <<_type, length::little-16, _values::binary-size(length)-unit(8), rest::binary>>
        ) do
     parse_start_network_interface_tlvs(parsed, rest)
   end
@@ -148,14 +148,14 @@ defmodule QMI.Codec.WirelessData do
           {:ok, packet_status_indication() | event_report_indication()}
           | {:error, :invalid_indication}
   def parse_indication(
-        <<@packet_service_status_ind::16-little, size::16-little, tlvs::binary-size(size)>>
+        <<@packet_service_status_ind::16-little, size::little-16, tlvs::binary-size(size)>>
       ) do
     result = parse_packet_status_indication(packet_status_indication_init(), tlvs)
 
     {:ok, result}
   end
 
-  def parse_indication(<<@event_report::little-16, size::16-little, tlvs::binary-size(size)>>) do
+  def parse_indication(<<@event_report::little-16, size::little-16, tlvs::binary-size(size)>>) do
     {:ok, parse_event_report_indication(%{name: :event_report_indication}, tlvs)}
   end
 
@@ -193,7 +193,7 @@ defmodule QMI.Codec.WirelessData do
 
   defp parse_packet_status_indication(
          indication,
-         <<0x10, 0x02, 0x00, call_end_reason::16-little, rest::binary>>
+         <<0x10, 0x02, 0x00, call_end_reason::little-16, rest::binary>>
        ) do
     indication
     |> Map.put(:call_end_reason, call_end_reason)
@@ -202,7 +202,7 @@ defmodule QMI.Codec.WirelessData do
 
   defp parse_packet_status_indication(
          indication,
-         <<0x11, 0x04, 0x00, call_end_reason_type::16-little, call_end_reason::16-little,
+         <<0x11, 0x04, 0x00, call_end_reason_type::little-16, call_end_reason::little-16,
            rest::binary>>
        ) do
     indication
@@ -219,7 +219,7 @@ defmodule QMI.Codec.WirelessData do
 
   defp parse_packet_status_indication(
          indication,
-         <<0x13, 0x02, 0x00, tech_name::16-little, rest::binary>>
+         <<0x13, 0x02, 0x00, tech_name::little-16, rest::binary>>
        ) do
     indication
     |> Map.put(:tech_name, parse_tech_name(tech_name))
@@ -243,7 +243,7 @@ defmodule QMI.Codec.WirelessData do
 
   defp parse_packet_status_indication(
          indication,
-         <<_type, length::16-little, _values::binary-size(length), rest::binary>>
+         <<_type, length::little-16, _values::binary-size(length), rest::binary>>
        ) do
     parse_packet_status_indication(indication, rest)
   end

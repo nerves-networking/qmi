@@ -131,7 +131,7 @@ defmodule QMI.Codec.NetworkAccess do
     %{
       service_id: @network_access_service_id,
       payload:
-        <<@get_signal_strength::16-little, 0x05::little-16, 0x10, 0x02::little-16,
+        <<@get_signal_strength::little-16, 0x05::little-16, 0x10, 0x02::little-16,
           0xEF::little-16>>,
       decode: &parse_get_signal_strength_resp/1
     }
@@ -150,7 +150,7 @@ defmodule QMI.Codec.NetworkAccess do
   defp parse_get_signal_strength_tlvs(
          parsed,
          <<0x11, _length::little-16, num_sets::little-16,
-           rssi_list::size(num_sets)-unit(16)-binary, rest::binary>>
+           rssi_list::binary-size(num_sets)-unit(16), rest::binary>>
        ) do
     rssi_reports =
       for <<rssi, radio_if <- rssi_list>>, do: %{rssi: -rssi, radio: radio_interface(radio_if)}
@@ -162,7 +162,7 @@ defmodule QMI.Codec.NetworkAccess do
 
   defp parse_get_signal_strength_tlvs(
          parsed,
-         <<_type, length::little-16, _values::size(length)-unit(8)-binary, rest::binary>>
+         <<_type, length::little-16, _values::binary-size(length)-unit(8), rest::binary>>
        ) do
     parse_get_signal_strength_tlvs(parsed, rest)
   end
@@ -273,7 +273,7 @@ defmodule QMI.Codec.NetworkAccess do
   end
 
   defp parse_get_system_selection_preference(
-         <<@get_system_selection_preference::little-16, size::little-16, tlvs::size(size)-binary>>
+         <<@get_system_selection_preference::little-16, size::little-16, tlvs::binary-size(size)>>
        ) do
     {:ok, do_parse_get_system_selection_preference(%{}, tlvs)}
   end
@@ -501,7 +501,7 @@ defmodule QMI.Codec.NetworkAccess do
   end
 
   defp parse_get_home_network_resp(
-         <<@get_home_network::little-16, size::little-16, tlvs::size(size)-binary>>
+         <<@get_home_network::little-16, size::little-16, tlvs::binary-size(size)>>
        ) do
     parse_get_home_network_tlvs(%{}, tlvs)
   end
@@ -516,7 +516,7 @@ defmodule QMI.Codec.NetworkAccess do
 
   defp parse_get_home_network_tlvs(
          parsed,
-         <<0x01, size::little-16, values::size(size)-binary, rest::binary>>
+         <<0x01, size::little-16, values::binary-size(size), rest::binary>>
        ) do
     <<mcc::little-16, mnc::little-16, description::binary>> = values
 
@@ -529,7 +529,7 @@ defmodule QMI.Codec.NetworkAccess do
 
   defp parse_get_home_network_tlvs(
          parsed,
-         <<_type, length::little-16, _values::size(length)-binary, rest::binary>>
+         <<_type, length::little-16, _values::binary-size(length), rest::binary>>
        ) do
     parse_get_home_network_tlvs(parsed, rest)
   end
@@ -542,7 +542,7 @@ defmodule QMI.Codec.NetworkAccess do
   @spec parse_indication(binary()) ::
           {:ok, serving_system_indication()} | {:error, :invalid_indication}
   def parse_indication(
-        <<@serving_system_indication::16-little, size::16-little, tlvs::binary-size(size)>>
+        <<@serving_system_indication::little-16, size::little-16, tlvs::binary-size(size)>>
       ) do
     result =
       :serving_system_indication
@@ -553,7 +553,7 @@ defmodule QMI.Codec.NetworkAccess do
   end
 
   def parse_indication(
-        <<@operator_name_indication::16-little, size::16-little, tlvs::binary-size(size)>>
+        <<@operator_name_indication::little-16, size::little-16, tlvs::binary-size(size)>>
       ) do
     result =
       :operator_name_indication
@@ -592,7 +592,7 @@ defmodule QMI.Codec.NetworkAccess do
 
   defp parse_operator_name_indication(
          indication,
-         <<0x14, size::16-little, nitz_info::binary-size(size), rest::binary>>
+         <<0x14, size::little-16, nitz_info::binary-size(size), rest::binary>>
        ) do
     <<name_encoding, _other_encodings::24, long_name_size, long_name::binary-size(long_name_size),
       short_name_size, short_name::binary-size(short_name_size)>> = nitz_info
@@ -623,10 +623,10 @@ defmodule QMI.Codec.NetworkAccess do
 
   defp parse_serving_system_indication(
          parsed,
-         <<0x01, length::16-little, values::size(length)-binary, rest::binary>>
+         <<0x01, length::little-16, values::binary-size(length), rest::binary>>
        ) do
     <<registration_state, cs_attach_state, ps_attach_state, selected_network, num_radio_if,
-      radio_if::size(num_radio_if)-binary>> = values
+      radio_if::binary-size(num_radio_if)>> = values
 
     parsed = %{
       parsed
@@ -710,7 +710,7 @@ defmodule QMI.Codec.NetworkAccess do
 
   defp parse_serving_system_indication(
          parsed,
-         <<_type, length::16-little, _values::size(length)-binary, rest::binary>>
+         <<_type, length::little-16, _values::binary-size(length), rest::binary>>
        ) do
     parse_serving_system_indication(parsed, rest)
   end
