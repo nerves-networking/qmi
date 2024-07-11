@@ -14,6 +14,7 @@ defmodule QMI.Codec.NetworkAccess do
   @get_rf_band_info 0x0031
   @set_system_selection_preference 0x0033
   @get_system_selection_preference 0x0034
+  @get_cell_location_info 0x0043
 
   # indications
   @serving_system_indication 0x0024
@@ -181,6 +182,147 @@ defmodule QMI.Codec.NetworkAccess do
   defp radio_interface(0x05), do: :umts
   defp radio_interface(0x08), do: :lte
   defp radio_interface(0x09), do: :td_scdma
+
+  @doc """
+  Make the `QMI.request()` for getting cell location info
+  """
+  @spec get_cell_location_info() :: QMI.request()
+  def get_cell_location_info() do
+    %{
+      service_id: @network_access_service_id,
+      payload: <<@get_cell_location_info::little-16, 0x00::little-16>>,
+      decode: &parse_get_cell_location_info/1
+    }
+  end
+
+  defp parse_get_cell_location_info(
+         <<@get_cell_location_info::little-16, _length::little-16, tlvs::binary>>
+       ) do
+    parse_get_cell_location_info_tlvs(%{}, tlvs)
+  end
+
+  defp parse_get_cell_location_info_tlvs(parsed, <<>>) do
+    {:ok, parsed}
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x2, 0x04::little-16, _qmi_result::little-16, _qmi_error::little-16, rest::binary>>
+       ) do
+    parse_get_cell_location_info_tlvs(parsed, rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x13, _length::little-16, ue_in_idle, plmn::3-bytes, tac::little-16,
+           global_cell_id::little-32, earfcn::little-16, serving_cell_id::little-16,
+           cell_resel_priority, s_non_intra_search, thresh_serving_low, s_intra_search, cells_len,
+           cells_info::binary-size(cells_len * 10), rest::binary>>
+       ) do
+    lte_info_intrafrequency = %{
+      ue_in_idle: ue_in_idle,
+      plmn: plmn,
+      tac: tac,
+      global_cell_id: global_cell_id,
+      earfcn: earfcn,
+      serving_cell_id: serving_cell_id,
+      cell_resel_priority: cell_resel_priority,
+      s_non_intra_search: s_non_intra_search,
+      thresh_serving_low: thresh_serving_low,
+      s_intra_search: s_intra_search,
+      cells: parse_cells([], cells_info)
+    }
+
+    parsed
+    |> Map.put(:lte_info_intrafrequency, lte_info_intrafrequency)
+    |> parse_get_cell_location_info_tlvs(rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x14, length::little-16, _data::binary-size(length), rest::binary>>
+       ) do
+    # LTE Info - Interfrequency
+    # Not sure how to decode this.
+    parse_get_cell_location_info_tlvs(parsed, rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x15, length::little-16, _data::binary-size(length), rest::binary>>
+       ) do
+    # LTE Info - Neighboring GSM
+    # Not sure how to decode this.
+    parse_get_cell_location_info_tlvs(parsed, rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x16, length::little-16, _data::binary-size(length), rest::binary>>
+       ) do
+    # LTE Info - Neighboring WCDMA
+    # Not sure how to decode this.
+    parse_get_cell_location_info_tlvs(parsed, rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x17, 4::little-16, umts_cell_id::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:umts_cell_id, umts_cell_id)
+    |> parse_get_cell_location_info_tlvs(rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x1E, 4::little-16, timing_advance::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:timing_advance, timing_advance)
+    |> parse_get_cell_location_info_tlvs(rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x26, 2::little-16, doppler_measurement::little-16, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:doppler_measurement, doppler_measurement)
+    |> parse_get_cell_location_info_tlvs(rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x27, 4::little-16, lte_intra_earfcn::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_intra_earfcn, lte_intra_earfcn)
+    |> parse_get_cell_location_info_tlvs(rest)
+  end
+
+  defp parse_get_cell_location_info_tlvs(
+         parsed,
+         <<0x28, len::little-16, data::binary-size(len), rest::binary>>
+       ) do
+    <<lte_inter_earfcn_len, info::binary-size(lte_inter_earfcn_len * 4)>> = data
+    lte_inter_earfcn = for <<x::little-32 <- info>>, do: x
+
+    parsed
+    |> Map.put(:lte_inter_earfcn, lte_inter_earfcn)
+    |> parse_get_cell_location_info_tlvs(rest)
+  end
+
+  defp parse_cells(cells, <<>>), do: Enum.reverse(cells)
+
+  defp parse_cells(
+         cells,
+         <<pci::little-16, rsrq::little-signed-16, rsrp::little-signed-16, rssi::little-signed-16,
+           srxlev::little-signed-16, rest::binary>>
+       ) do
+    cell = %{pci: pci, rsrq: rsrq / 10, rsrp: rsrp / 10, rssi: rssi / 10, srxlev: srxlev}
+    parse_cells([cell | cells], rest)
+  end
 
   @typedoc """
   The roaming preference

@@ -15,6 +15,16 @@ defmodule QMI.NetworkAccess do
   end
 
   @doc """
+  Get the current location info
+  """
+  @spec get_cell_location_info(QMI.name()) ::
+          {:ok, Codec.NetworkAccess.get_cell_location_info()} | {:error, atom()}
+  def get_cell_location_info(qmi) do
+    Codec.NetworkAccess.get_cell_location_info()
+    |> QMI.call(qmi)
+  end
+
+  @doc """
   Get the home network of the device
 
   This returns the MCC, MNC, and service provider for the network.

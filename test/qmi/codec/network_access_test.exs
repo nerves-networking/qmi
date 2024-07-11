@@ -85,6 +85,44 @@ defmodule QMI.Codec.NetworkAccessTest do
              {:ok, [%{band: "WCDMA PCS 1900", channel: 687, interface: :umts}]}
   end
 
+  test "get cell location information" do
+    request = NetworkAccess.get_cell_location_info()
+
+    assert IO.iodata_to_binary(request.payload) == <<0x43, 0, 0, 0>>
+    assert request.service_id == 0x03
+
+    assert request.decode.(
+             <<0x43, 0, 13, 0, 2, 4, 0, 0, 0, 0, 0, 19, 39, 0, 1, 19, 0, 20, 10, 18, 17, 119, 27,
+               1, 246, 19, 57, 0, 2, 2, 2, 62, 2, 57, 0, 140, 255, 240, 251, 14, 253, 26, 0, 78,
+               0, 114, 255, 224, 251, 200, 252, 24, 0, 20, 14, 0, 1, 2, 208, 7, 0, 8, 3, 0, 82, 3,
+               0, 8, 3, 0, 21, 2, 0, 1, 0, 22, 2, 0, 1, 0, 30, 4, 0, 255, 255, 255, 255, 38, 2, 0,
+               70, 0, 39, 4, 0, 246, 19, 0, 0, 40, 9, 0, 2, 208, 7, 0, 0, 82, 3, 0, 0>>
+           ) ==
+             {:ok,
+              %{
+                lte_info_intrafrequency: %{
+                  ue_in_idle: 1,
+                  plmn: <<19, 0, 20>>,
+                  tac: 4618,
+                  global_cell_id: 18_577_169,
+                  earfcn: 5110,
+                  serving_cell_id: 57,
+                  cell_resel_priority: 2,
+                  s_non_intra_search: 2,
+                  thresh_serving_low: 2,
+                  s_intra_search: 62,
+                  cells: [
+                    %{rssi: -75.4, pci: 57, rsrq: -11.6, rsrp: -104.0, srxlev: 26},
+                    %{rssi: -82.4, pci: 78, rsrq: -14.2, rsrp: -105.6, srxlev: 24}
+                  ]
+                },
+                timing_advance: 4_294_967_295,
+                doppler_measurement: 70,
+                lte_intra_earfcn: 5110,
+                lte_inter_earfcn: [2000, 850]
+              }}
+  end
+
   test "parse operator name indication" do
     indication =
       <<58, 0, 25, 0, 20, 22, 0, 1, 0, 0, 0, 8, 0, 65, 0, 84, 0, 38, 0, 84, 8, 0, 65, 0, 84, 0,
