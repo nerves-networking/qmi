@@ -25,6 +25,16 @@ defmodule QMI.NetworkAccess do
   end
 
   @doc """
+  Get the sys info
+  """
+  @spec get_sys_info(QMI.name()) ::
+          {:ok, Codec.NetworkAccess.get_sys_info()} | {:error, atom()}
+  def get_sys_info(qmi) do
+    Codec.NetworkAccess.get_sys_info()
+    |> QMI.call(qmi)
+  end
+
+  @doc """
   Get the home network of the device
 
   This returns the MCC, MNC, and service provider for the network.

@@ -15,6 +15,7 @@ defmodule QMI.Codec.NetworkAccess do
   @set_system_selection_preference 0x0033
   @get_system_selection_preference 0x0034
   @get_cell_location_info 0x0043
+  @get_sys_info 0x004D
 
   # indications
   @serving_system_indication 0x0024
@@ -183,6 +184,75 @@ defmodule QMI.Codec.NetworkAccess do
   defp radio_interface(0x08), do: :lte
   defp radio_interface(0x09), do: :td_scdma
 
+  @typedoc """
+  Cell set
+
+  * `:pci` - Physical cell ID
+  * `:rsrq` - Current RSRQ in 1/10 dB as measured by L1
+  * `:rsrp` - Current RSRP in 1/10 dBm as measured by L1
+  * `:rssi` - Current RSSI in 1/10 dBm as measured by L1
+  * `:srxlev` - Cell selection Rx level (Srxlev) value (This field is only valid when
+    ue_in_idle is TRUE.)
+  """
+  @type cell() :: %{
+          pci: 0..503,
+          rsrq: -200..-30,
+          rsrp: -1400..-440,
+          rssi: -1200..0,
+          srxlev: -128..128
+        }
+
+  @typedoc """
+  LTE Info - Intrafrequency
+
+  * `:ue_in_idle` - true if the UE is in Idle mode
+  * `:plmn` - coded as octet 3, 4, and 5 in 3GPP TS 24.008Section 10.5.1.3
+  * `:tac` - Tracking area code
+  * `:global_cell_id` - Global cell ID in the system information block
+  * `:earfcn` - E-UTRA absolute radio frequency channel number of the serving cell.
+  * `:serving_cell_id` - LTE serving cell ID. Range: 0 to 503. This is the cell ID
+    of the serving cell and can be found in the cell list.
+  * `:cell_resel_priority` - Priority for serving frequency. Range: 0 to 7. (This field
+    is only valid when ue_in_idle is TRUE.)
+  * `:s_non_intra_search` - S non-intra search threshold to control non-intrafrequency searches.
+    Range: 0 to 31. (This field is only valid when ue_in_idle is
+    TRUE.)
+  * `:thresh_serving_low` - Serving cell low threshold. Range: 0 to 31. (This field is
+    only valid when ue_in_idle is TRUE.)
+  * `:s_intra_search` - S intra search threshold. Range: 0 to 31. The current cell measurement
+    must fall below this threshold to consider intrafrequency for reselection. 
+    (This field is only valid when ue_in_idle is TRUE.)
+  """
+  @type lte_info_intrafrequency() :: %{
+          ue_in_idle: boolean(),
+          plmn: pos_integer(),
+          tac: pos_integer(),
+          global_cell_id: pos_integer(),
+          earfcn: 0..65_535,
+          serving_cell_id: 0..503,
+          cell_resel_priority: 0..7,
+          s_non_intra_search: 0..31,
+          thresh_serving_low: 0..31,
+          s_intra_search: 0..31,
+          cells: [cell()]
+        }
+
+  @typedoc """
+  Cell Location Info
+
+  * `:timing_advance` - Timing advance of the LTE cell in microseconds
+  * `:doppler_measurement` - Doppler measurement in Hz
+  * `:lte_intra_earfcn` - LTE intrafrequency EARFCN extended size
+  * `:lte_inter_earfcn` - LTE interfrequency EARFCN extended size
+  """
+  @type get_cell_location_info() :: %{
+          optional(:lte_info_intrafrequency) => lte_info_intrafrequency(),
+          optional(:timing_advance) => pos_integer(),
+          optional(:doppler_measurement) => 0..400,
+          optional(:lte_intra_earfcn) => pos_integer(),
+          optional(:lte_inter_earfcn) => pos_integer()
+        }
+
   @doc """
   Make the `QMI.request()` for getting cell location info
   """
@@ -323,6 +393,454 @@ defmodule QMI.Codec.NetworkAccess do
     cell = %{pci: pci, rsrq: rsrq / 10, rsrp: rsrp / 10, rssi: rssi / 10, srxlev: srxlev}
     parse_cells([cell | cells], rest)
   end
+
+  @typedoc """
+  System table index referencing the beginning of
+  the geo in which the current serving system is
+  present. When the system index is not known,
+  0xFFFF is used.
+  """
+  @type geo_sys_idx() :: 0..0xFFFF
+
+  @typedoc """
+  SIM rejection info
+
+  * `:available` - SIM is available
+  * `:not_available` - SIM is not available
+  * `:cs_invalid` - SIM has been marked by the network as invalid for circuit-switched services
+  * `:ps_invalid` - SIM has been marked by the network as invalid for packet-switched services
+  * `:cs_ps_invalid` - SIM has been marked by the network as invalid for circuit-switched and
+    packet-switched services
+  """
+  @type sim_rej_info() :: :not_available | :available | :cs_invalid | :ps_invalid | :cs_ps_invalid
+
+  @typedoc """
+  LTE Voice domain
+
+  * `:no_voice` - No voice, stay on LTE
+  * `:ims` - Voice is supported over the IMS network
+  * `:"1X" - Voice is supported over the 1X network
+  * `:"3GPP" - Voice is supported over the 3GPP network
+  """
+  @type lte_voice_status() :: :no_voice | :ims | :"1X" | :"3GPP"
+
+  @typedoc """
+  Registration restriction
+
+  * `:unrestricted` - Device follows the normal registration process
+  * `:camped_only` - Device follows the camp-only registration process
+  """
+  @type srv_reg_restriction() :: :unrestricted | :camped_only
+
+  @typedoc """
+  LTE registration domain
+
+  * `:not_applicable` - UE is not in Camp Only mode
+  * `:cs_only` - UE is in Camp Only mode and the PLMN can provide CS service only
+  * `:ps_only` - UE is in Camp Only mode and the PLMN can provide PS service only
+  * `:cs_ps` - UE is in Camp Only mode and the PLMN can provide CS and PS service 
+  * `:limited_service` - UE is in Camp Only mode, but the PLMN cannot provide any service
+  """
+  @type lte_reg_domain() :: :not_applicable | :cs_only | :ps_only | :cs_ps | :limited_service
+
+  @typedoc """
+  LTE SMS domain
+
+  * `:no_sms` - No SMS, stay on LTE
+  * `:ims` - SMS is supported over the IMS network
+  * `:"1X" - SMS is supported over the 1X network
+  * `:"3GPP" - SMS is supported over the 3GPP network
+  """
+  @type lte_sms_status() :: :no_sms | :ims | :"1X" | :"3GPP"
+
+  @typedoc """
+  Whether LTE emergency bearer is supported.
+
+  * :true - LTE emergency bearer is supported
+  * :false - LTE emergency bearer is NOT supported
+  * :unknown - for scenarios where information is not available from the lower
+    layers; e.g., if the UE powers up while acquiring service or in the middle
+    of an attach procedure.
+  """
+  @type emergency_access() :: boolean() | :unknown
+
+  @typedoc """
+  Cell access status for LTE calls
+
+  * `:normal_only` - Cell access is allowed for normal calls only
+  * `:emergency_only` - Cell access is allowed for emergency calls only
+  * `:no_calls` - Cell access is not allowed for any call type
+  * `:all_calls` - Cell access is allowed for all call types
+  * `:unknown` - Cell access type is unknown
+  """
+  @type lte_cell_status() :: :normal_only | :emergency_only | :no_calls | :all_calls | :unknown
+
+  @typedoc """
+  eMBMS coverage status
+
+  * `:not_available` - Coverage not available
+  * `:available` - Coverage available
+  * `:not_available_due_to_uemode` - Coverage not available due to UE Mode
+  * `:not_available_due_to_emergency` - Coverage not available due to emergency
+  * `:unknown` - Coverage unknown
+  """
+  @type embms_coverage_status() ::
+          :not_available
+          | :available
+          | :not_available_due_to_uemode
+          | :not_available_due_to_emergency
+          | :unknown
+
+  @typedoc """
+  LTE System Infox
+
+  * `:srv_domain` - Service domain registered on the system
+  * `:srv_capability` - Current system’s service capability
+  * `:roam_status` - Current system's roaming status
+  * `:is_sys_forbidden` - Whether the system is forbidden
+  * `:lac` - Location area code (only applicable for 3GPP)
+  * `:cell_id` - Cell ID
+  * `:reg_reject_srv_domain` - Type of service domain in which the registration is rejected
+  * `:reg_reject_cause` - Reject cause
+  * `:mcc`, `:mnc` - ASCII network ID
+  * `:tac` - Tracking area code (only applicable for LTE)
+  """
+  @type lte_sys_info() :: %{
+          optional(:srv_domain) => :no_service | :cs_only | :ps_only | :cs_ps | :camped,
+          optional(:srv_capability) => :no_service | :cs_only | :ps_only | :cs_ps | :camped,
+          optional(:roam_status) =>
+            :off
+            | :on
+            | :blink
+            | :out_of_neighborhood
+            | :out_of_building
+            | :preferred_system
+            | :available_system
+            | :alliance_partner
+            | :premium_partner
+            | :full_service
+            | :partial_service
+            | :banner_on,
+          optional(:is_sys_forbidden) => boolean(),
+          optional(:lac) => pos_integer(),
+          optional(:cell_id) => pos_integer(),
+          optional(:reg_reject_srv_domain) =>
+            :no_service | :cs_only | :ps_only | :cs_ps | :camped,
+          optional(:reg_reject_cause) => pos_integer(),
+          optional(:mcc) => String.t(),
+          optional(:mnc) => String.t(),
+          optional(:tac) => pos_integer()
+        }
+
+  @typedoc """
+  Sys Info
+  """
+  @type get_sys_info() :: %{
+          optional(:lte_sys_info) => lte_sys_info(),
+          optional(:geo_sys_idx) => geo_sys_idx(),
+          optional(:voice_support_on_lte) => boolean(),
+          optional(:sim_rej_info) => sim_rej_info(),
+          optional(:lte_ims_voice_avail) => boolean(),
+          optional(:lte_voice_status) => lte_voice_status(),
+          optional(:srv_reg_restriction) => srv_reg_restriction(),
+          optional(:lte_reg_domain) => lte_reg_domain(),
+          optional(:lte_embms_coverage_trace_id) => -1..32_768,
+          optional(:lte_sms_status) => lte_sms_status(),
+          optional(:lte_is_eb_supported) => emergency_access(),
+          optional(:emergency_access_barred) => emergency_access(),
+          optional(:lte_cell_status) => lte_cell_status(),
+          optional(:embms_coverage_status) => embms_coverage_status()
+        }
+
+  @doc """
+  Make the `QMI.request()` for getting cell location info
+  """
+  @spec get_sys_info() :: QMI.request()
+  def get_sys_info() do
+    %{
+      service_id: @network_access_service_id,
+      payload: <<@get_sys_info::little-16, 0x00::little-16>>,
+      decode: &parse_get_sys_info/1
+    }
+  end
+
+  defp parse_get_sys_info(<<@get_sys_info::little-16, _length::little-16, tlvs::binary>>) do
+    parse_get_sys_info_tlvs(%{}, tlvs)
+  end
+
+  defp parse_get_sys_info_tlvs(parsed, <<>>) do
+    {:ok, parsed}
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x2, 0x04::little-16, _qmi_result::little-16, _qmi_error::little-16, rest::binary>>
+       ) do
+    parse_get_sys_info_tlvs(parsed, rest)
+  end
+
+  defp parse_get_sys_info_tlvs(parsed, <<0x13, 0x03::little-16, _data::3-bytes, rest::binary>>) do
+    parse_get_sys_info_tlvs(parsed, rest)
+  end
+
+  defp parse_get_sys_info_tlvs(parsed, <<0x14, 0x03::little-16, _data::3-bytes, rest::binary>>) do
+    parse_get_sys_info_tlvs(parsed, rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x19, 29::little-16, lte_sys_info::29-bytes, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_sys_info, parse_lte_sys_info(lte_sys_info))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x1E, 2::little-16, geo_sys_idx::little-16, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:geo_sys_idx, geo_sys_idx)
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x21, 1::little-16, voice_support_on_lte, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:voice_support_on_lte, parse_voice_support_on_lte(voice_support_on_lte))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(parsed, <<0x26, 1::little-16, _deprecated, rest::binary>>) do
+    parse_get_sys_info_tlvs(parsed, rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x27, 4::little-16, sim_rej_info::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:sim_rej_info, parse_sim_rej_info(sim_rej_info))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x29, 1::little-16, lte_ims_voice_avail, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_ims_voice_avail, parse_lte_ims_voice_avail(lte_ims_voice_avail))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x2A, 4::little-16, lte_voice_status::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_voice_status, parse_lte_voice_status(lte_voice_status))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x2F, 4::little-16, srv_reg_restriction::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:srv_reg_restriction, parse_srv_reg_restriction(srv_reg_restriction))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x31, 4::little-16, lte_reg_domain::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_reg_domain, parse_lte_reg_domain(lte_reg_domain))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x34, 2::little-16, lte_embms_coverage_trace_id::little-signed-16, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_embms_coverage_trace_id, lte_embms_coverage_trace_id)
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x38, 4::little-16, lte_sms_status::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_sms_status, parse_lte_sms_status(lte_sms_status))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x39, 4::little-16, lte_is_eb_supported::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_is_eb_supported, parse_lte_is_eb_supported(lte_is_eb_supported))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x3E, 4::little-16, emergency_access_barred::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:emergency_access_barred, parse_emergency_access_barred(emergency_access_barred))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x44, 4::little-16, lte_cell_status::little-signed-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:lte_cell_status, parse_lte_cell_status(lte_cell_status))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<0x46, 4::little-16, embms_coverage_status::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:embms_coverage_status, parse_embms_coverage_status(embms_coverage_status))
+    |> parse_get_sys_info_tlvs(rest)
+  end
+
+  defp parse_get_sys_info_tlvs(
+         parsed,
+         <<type, length::little-16, data::binary-size(length), rest::binary>>
+       ) do
+    Logger.debug(
+      "[QMI]: Ignoring TLV from operator get_sys_info #{type} #{length} #{inspect(data)}"
+    )
+
+    parse_get_sys_info_tlvs(parsed, rest)
+  end
+
+  defp parse_lte_sys_info(
+         <<srv_domain_valid, srv_domain, srv_capability_valid, srv_capability, roam_status_valid,
+           roam_status, is_sys_forbidden_valid, is_sys_forbidden, lac_valid, lac::little-16,
+           cell_id_valid, cell_id::little-32, reg_reject_info_valid, reject_srcv_domain,
+           rej_cause, network_id_valid, mcc::3-bytes, mnc::3-bytes, tac_valid, tac::little-16>>
+       ) do
+    Enum.reduce(
+      [
+        {:srv_domain, srv_domain_valid, parse_srv_domain(srv_domain)},
+        {:srv_capability, srv_capability_valid, parse_srv_capability(srv_capability)},
+        {:roam_status, roam_status_valid, parse_roam_status(roam_status)},
+        {:is_sys_forbidden, is_sys_forbidden_valid, parse_is_sys_forbidden(is_sys_forbidden)},
+        {:lac, lac_valid, lac},
+        {:cell_id, cell_id_valid, cell_id},
+        {:reg_reject_srv_domain, reg_reject_info_valid,
+         parse_reject_srcv_domain(reject_srcv_domain)},
+        {:reg_reject_cause, reg_reject_info_valid, rej_cause},
+        {:mcc, network_id_valid, mcc},
+        {:mnc, network_id_valid, mnc},
+        {:tac, tac_valid, tac}
+      ],
+      %{},
+      fn {name, valid, value}, acc ->
+        if valid == 1, do: Map.put(acc, name, value), else: acc
+      end
+    )
+  end
+
+  defp parse_srv_domain(0), do: :no_service
+  defp parse_srv_domain(1), do: :cs_only
+  defp parse_srv_domain(2), do: :ps_only
+  defp parse_srv_domain(3), do: :cs_ps
+  defp parse_srv_domain(4), do: :camped
+
+  defp parse_srv_capability(0), do: :no_service
+  defp parse_srv_capability(1), do: :cs_only
+  defp parse_srv_capability(2), do: :ps_only
+  defp parse_srv_capability(3), do: :cs_ps
+  defp parse_srv_capability(4), do: :camped
+
+  defp parse_roam_status(0), do: :off
+  defp parse_roam_status(1), do: :on
+  defp parse_roam_status(2), do: :blink
+  defp parse_roam_status(3), do: :out_of_neighborhood
+  defp parse_roam_status(4), do: :out_of_building
+  defp parse_roam_status(5), do: :preferred_system
+  defp parse_roam_status(6), do: :available_system
+  defp parse_roam_status(7), do: :alliance_partner
+  defp parse_roam_status(8), do: :premium_partner
+  defp parse_roam_status(9), do: :full_service
+  defp parse_roam_status(0x0A), do: :partial_service
+  defp parse_roam_status(0x0B), do: :banner_on
+  defp parse_roam_status(unknown), do: unknown
+
+  defp parse_is_sys_forbidden(0), do: false
+  defp parse_is_sys_forbidden(1), do: true
+
+  defp parse_reject_srcv_domain(0), do: :no_service
+  defp parse_reject_srcv_domain(1), do: :cs_only
+  defp parse_reject_srcv_domain(2), do: :ps_only
+  defp parse_reject_srcv_domain(3), do: :cs_ps
+  defp parse_reject_srcv_domain(4), do: :camped
+
+  defp parse_voice_support_on_lte(0), do: false
+  defp parse_voice_support_on_lte(1), do: true
+
+  defp parse_sim_rej_info(0), do: :not_available
+  defp parse_sim_rej_info(1), do: :available
+  defp parse_sim_rej_info(2), do: :cs_invalid
+  defp parse_sim_rej_info(3), do: :ps_invalid
+  defp parse_sim_rej_info(4), do: :cs_ps_invalid
+
+  defp parse_lte_ims_voice_avail(0), do: false
+  defp parse_lte_ims_voice_avail(1), do: true
+
+  defp parse_lte_voice_status(0), do: :no_voice
+  defp parse_lte_voice_status(1), do: :ims
+  defp parse_lte_voice_status(2), do: :"1X"
+  defp parse_lte_voice_status(3), do: :"3GPP"
+
+  defp parse_srv_reg_restriction(0), do: :unrestricted
+  defp parse_srv_reg_restriction(1), do: :camped_only
+
+  defp parse_lte_reg_domain(0), do: :not_applicable
+  defp parse_lte_reg_domain(1), do: :cs_only
+  defp parse_lte_reg_domain(2), do: :ps_only
+  defp parse_lte_reg_domain(3), do: :cs_ps
+  defp parse_lte_reg_domain(4), do: :limited_service
+
+  defp parse_lte_sms_status(0), do: :no_sms
+  defp parse_lte_sms_status(1), do: :ims
+  defp parse_lte_sms_status(2), do: :"1X"
+  defp parse_lte_sms_status(3), do: :"3GPP"
+
+  defp parse_lte_is_eb_supported(0), do: false
+  defp parse_lte_is_eb_supported(1), do: true
+  defp parse_lte_is_eb_supported(2), do: :unknown
+
+  defp parse_emergency_access_barred(0), do: false
+  defp parse_emergency_access_barred(1), do: true
+  defp parse_emergency_access_barred(2), do: :unknown
+
+  defp parse_lte_cell_status(0), do: :normal_only
+  defp parse_lte_cell_status(1), do: :emergency_access_only
+  defp parse_lte_cell_status(2), do: :no_calls
+  defp parse_lte_cell_status(3), do: :all_calls
+  defp parse_lte_cell_status(-1), do: :unknown
+
+  defp parse_embms_coverage_status(0), do: :not_available
+  defp parse_embms_coverage_status(1), do: :available
+  defp parse_embms_coverage_status(2), do: :not_available_due_to_uemode
+  defp parse_embms_coverage_status(3), do: :not_available_due_to_emergency
+  defp parse_embms_coverage_status(4), do: :unknown
 
   @typedoc """
   The roaming preference
