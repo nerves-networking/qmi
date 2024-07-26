@@ -55,7 +55,7 @@ defmodule QMI.MixProject do
 
   def docs do
     [
-      assets: "assets",
+      assets: %{"assets" => "assets"},
       extras: [
         "README.md",
         "CHANGELOG.md"
