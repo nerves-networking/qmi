@@ -220,7 +220,7 @@ defmodule QMI.Codec.NetworkAccess do
   * `:thresh_serving_low` - Serving cell low threshold. Range: 0 to 31. (This field is
     only valid when ue_in_idle is TRUE.)
   * `:s_intra_search` - S intra search threshold. Range: 0 to 31. The current cell measurement
-    must fall below this threshold to consider intrafrequency for reselection. 
+    must fall below this threshold to consider intrafrequency for reselection.
     (This field is only valid when ue_in_idle is TRUE.)
   """
   @type lte_info_intrafrequency() :: %{
@@ -438,7 +438,7 @@ defmodule QMI.Codec.NetworkAccess do
   * `:not_applicable` - UE is not in Camp Only mode
   * `:cs_only` - UE is in Camp Only mode and the PLMN can provide CS service only
   * `:ps_only` - UE is in Camp Only mode and the PLMN can provide PS service only
-  * `:cs_ps` - UE is in Camp Only mode and the PLMN can provide CS and PS service 
+  * `:cs_ps` - UE is in Camp Only mode and the PLMN can provide CS and PS service
   * `:limited_service` - UE is in Camp Only mode, but the PLMN cannot provide any service
   """
   @type lte_reg_domain() :: :not_applicable | :cs_only | :ps_only | :cs_ps | :limited_service
