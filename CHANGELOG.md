@@ -3,7 +3,17 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.8.6] - 2021-09-08
+## [v0.9.0] - 2024-07-25
+
+## Changed
+
+* Require Elixir 1.14 and OTP 25
+
+### Added
+
+* Add `QMI_NAS_GET_SYS_INFO` and `QMI_NAS_GET_CELL_LOCATION_INFO`
+
+## [v0.8.6] - 2023-09-08
 
 ## Changed
 
@@ -194,6 +204,7 @@ Major refactor
 
 Initial release
 
+[v0.9.0]: https://github.com/nerves-networking/qmi/compare/v0.8.6...v0.9.0
 [v0.8.6]: https://github.com/nerves-networking/qmi/compare/v0.8.5...v0.8.6
 [v0.8.5]: https://github.com/nerves-networking/qmi/compare/v0.8.4...v0.8.5
 [v0.8.4]: https://github.com/nerves-networking/qmi/compare/v0.8.3...v0.8.4
