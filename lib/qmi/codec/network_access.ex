@@ -745,8 +745,8 @@ defmodule QMI.Codec.NetworkAccess do
         {:reg_reject_srv_domain, reg_reject_info_valid,
          parse_reject_srcv_domain(reject_srcv_domain)},
         {:reg_reject_cause, reg_reject_info_valid, rej_cause},
-        {:mcc, network_id_valid, mcc},
-        {:mnc, network_id_valid, mnc},
+        {:mcc, network_id_valid, trim_ascii_bytes(mcc)},
+        {:mnc, network_id_valid, trim_ascii_bytes(mnc)},
         {:tac, tac_valid, tac}
       ],
       %{},
@@ -1548,4 +1548,19 @@ defmodule QMI.Codec.NetworkAccess do
   defp tds_cdma_band_name(203), do: "D"
   defp tds_cdma_band_name(204), do: "E"
   defp tds_cdma_band_name(205), do: "F"
+
+  defp trim_ascii_bytes(value, acc \\ <<>>)
+
+  defp trim_ascii_bytes(<<char, rest::binary>>, acc) do
+    char_str = <<char>>
+    # the specification doesn't provide an explicit termination
+    # character, so check if it's printable to determine termination
+    if String.printable?(char_str) do
+      trim_ascii_bytes(rest, acc <> char_str)
+    else
+      acc
+    end
+  end
+
+  defp trim_ascii_bytes(<<>>, acc), do: acc
 end
