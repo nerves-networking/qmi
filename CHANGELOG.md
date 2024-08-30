@@ -3,6 +3,12 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.0] - 2024-07-25
+
+## Changed
+
+* Trim invalid characters from `QMI_NAS_GET_SYS_INFO` MCC and MNC values
+
 ## [v0.9.0] - 2024-07-25
 
 ## Changed
