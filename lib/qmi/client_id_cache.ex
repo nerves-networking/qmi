@@ -12,6 +12,8 @@ defmodule QMI.ClientIDCache do
   @spec get_client_id(module(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, atom()}
   def get_client_id(qmi, service_id) do
     GenServer.call(name(qmi), {:get_client_id, qmi, service_id})
+  catch
+    :exit, {:noproc, _} -> {:error, :qmi_interface_down}
   end
 
   defp name(qmi) do
