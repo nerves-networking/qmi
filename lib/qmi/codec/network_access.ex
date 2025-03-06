@@ -1,3 +1,10 @@
+# SPDX-FileCopyrightText: 2021 Frank Hunleth
+# SPDX-FileCopyrightText: 2021 Matt Ludwigs
+# SPDX-FileCopyrightText: 2023 Liv Cella
+# SPDX-FileCopyrightText: 2024 Connor Rigby
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 defmodule QMI.Codec.NetworkAccess do
   @moduledoc """
   Codec for making network access service requests

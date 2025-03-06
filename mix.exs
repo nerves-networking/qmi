@@ -84,16 +84,21 @@ defmodule QMI.MixProject do
   def package do
     [
       files: [
-        "lib",
-        "c_src",
         "CHANGELOG.md",
-        "LICENSE",
+        "c_src",
+        "lib",
+        "LICENSES/*",
         "mix.exs",
+        "NOTICE",
         "README.md",
+        "REUSE.toml",
         "Makefile"
       ],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => @source_url}
+      links: %{
+        "GitHub" => @source_url,
+        "REUSE Compliance" => "https://api.reuse.software/info/github.com/nerves-networking/qmi"
+      }
     ]
   end
 end

@@ -1,3 +1,9 @@
+# SPDX-FileCopyrightText: 2021 Jon Carstens
+# SPDX-FileCopyrightText: 2021 Matt Ludwigs
+# SPDX-FileCopyrightText: 2023 Liv Cella
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 defmodule QMI.Codec.DeviceManagement do
   @moduledoc """
   Codec for making device management requests

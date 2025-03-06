@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2020 Frank Hunleth
+// SPDX-FileCopyrightText: 2023 Jon Carstens
+//
+// SPDX-License-Identifier: Apache-2.0
+//
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>

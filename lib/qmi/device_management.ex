@@ -1,3 +1,9 @@
+# SPDX-FileCopyrightText: 2021 Frank Hunleth
+# SPDX-FileCopyrightText: 2021 Jon Carstens
+# SPDX-FileCopyrightText: 2021 Matt Ludwigs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 defmodule QMI.DeviceManagement do
   @moduledoc """
   Device Management service requests

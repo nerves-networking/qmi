@@ -1,3 +1,10 @@
+# SPDX-FileCopyrightText: 2020 Jon Carstens
+# SPDX-FileCopyrightText: 2021 Frank Hunleth
+# SPDX-FileCopyrightText: 2021 Matt Ludwigs
+# SPDX-FileCopyrightText: 2023 Liv Cella
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 defmodule QMI.Driver do
   @moduledoc false
 

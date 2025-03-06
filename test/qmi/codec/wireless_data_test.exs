@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2021 Matt Ludwigs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 defmodule QMI.Codec.WirelessDataTest do
   use ExUnit.Case, async: true
 

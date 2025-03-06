@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2021 Jon Carstens
+# SPDX-FileCopyrightText: 2021 Matt Ludwigs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 defmodule QMI.Codec.DeviceManagementTest do
   use ExUnit.Case, async: true
 
