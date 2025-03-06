@@ -85,7 +85,7 @@ defmodule QMI.MixProject do
     [
       files: [
         "lib",
-        "src",
+        "c_src",
         "CHANGELOG.md",
         "LICENSE",
         "mix.exs",

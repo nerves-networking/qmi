@@ -50,7 +50,7 @@ all: install
 
 install: $(BUILD) $(DEFAULT_TARGETS)
 
-$(BUILD)/%.o: src/%.c
+$(BUILD)/%.o: c_src/%.c
 	@echo " CC $(notdir $@)"
 	$(CC) -c $(CFLAGS) -o $@ $<
 
