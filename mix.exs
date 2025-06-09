@@ -22,20 +22,25 @@ defmodule QMI.MixProject do
         flags: [:missing_return, :extra_return, :unmatched_returns, :error_handling, :underspecs]
       ],
       docs: docs(),
-      package: package(),
-      preferred_cli_env: [
-        docs: :docs,
-        "hex.build": :docs,
-        "hex.publish": :docs,
-        dialyzer: :lint,
-        credo: :lint
-      ]
+      package: package()
     ]
   end
 
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        docs: :docs,
+        "hex.build": :docs,
+        "hex.publish": :docs,
+        dialyzer: :lint,
+        credo: :lint
+      ]
     ]
   end
 
