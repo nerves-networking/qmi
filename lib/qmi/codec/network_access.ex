@@ -833,9 +833,11 @@ defmodule QMI.Codec.NetworkAccess do
   defp parse_lte_is_eb_supported(1), do: true
   defp parse_lte_is_eb_supported(2), do: :unknown
 
+  # 0x80000000 seen in the wild, but not documented
   defp parse_emergency_access_barred(0), do: false
   defp parse_emergency_access_barred(1), do: true
   defp parse_emergency_access_barred(2), do: :unknown
+  defp parse_emergency_access_barred(_), do: :invalid
 
   defp parse_lte_cell_status(0), do: :normal_only
   defp parse_lte_cell_status(1), do: :emergency_access_only
