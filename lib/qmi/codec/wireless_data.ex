@@ -536,7 +536,7 @@ defmodule QMI.Codec.WirelessData do
   # Skip other TLVs
   defp do_parse_get_current_settings_tlvs(
          parsed,
-         <<type, len::little-16, value::binary-size(len), rest::binary>>
+         <<_type, len::little-16, _value::binary-size(len), rest::binary>>
        ) do
     do_parse_get_current_settings_tlvs(parsed, rest)
   end
