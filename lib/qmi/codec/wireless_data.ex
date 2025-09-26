@@ -15,6 +15,7 @@ defmodule QMI.Codec.WirelessData do
   @start_network_interface 0x0020
   @packet_service_status_ind 0x0022
   @modify_profile_settings 0x0028
+  @get_current_settings 0x002D
 
   # When a stat is configured to be reported but no data has been recorded
   # before the indication is sent, the value is `0xFFFFFFFF` which is treated as
@@ -396,6 +397,153 @@ defmodule QMI.Codec.WirelessData do
 
   defp get_stat_value(value) when value == @missing_stat_value, do: 0
   defp get_stat_value(value), do: value
+
+  @typedoc """
+  IP family selector for WDS Get Current Settings
+
+  * `4` - IPv4
+  * `6` - IPv6
+  """
+  @type ip_family() :: 4 | 6
+
+  @typedoc """
+  Options for Get Current Settings
+
+  * `:extended_mask` - 32-bit mask for Extended Requested Settings TLV (0x11). Defaults to 0xFFFFFFFF.
+  * `:packet_data_handle` - integer PDH from Start Network Interface response (TLV 0x01).
+  """
+  @type get_current_settings_opt() ::
+          {:extended_mask, non_neg_integer()} | {:packet_data_handle, non_neg_integer()}
+
+  @typedoc """
+  Subset of current settings we care about for MTU management
+  """
+  @type current_settings() :: %{
+          optional(:ipv4_mtu) => non_neg_integer(),
+          optional(:ipv6_mtu) => non_neg_integer()
+        }
+
+  @doc """
+  Build WDS Get Current Settings request. Defaults to IPv4 if no family given.
+
+  The request includes:
+  - TLV 0x10 (Requested Settings mask) set to all bits (0xFFFFFFFF) to get all available fields
+  - TLV 0x19 (IP family) as 0x04 for IPv4 or 0x06 for IPv6
+  """
+  @spec get_current_settings(ip_family()) :: QMI.request()
+  def get_current_settings(ip_family \\ 4), do: get_current_settings(ip_family, [])
+
+  @doc """
+  Build WDS Get Current Settings request with options similar a qmicli.
+
+  Supported options:
+  * `:extended_mask` - adds TLV 0x11 (Extended Requested Settings) with this mask
+  * `:packet_data_handle` - adds TLV 0x01 (Packet Data Handle) with given PDH
+  """
+  @spec get_current_settings(ip_family(), [get_current_settings_opt()]) :: QMI.request()
+  def get_current_settings(ip_family, opts) when ip_family in [4, 6] do
+    req_mask = <<0x10, 0x04::little-16, 0xFF, 0xFF, 0xFF, 0xFF>>
+    ext_mask = Keyword.get(opts, :extended_mask, 0xFFFF_FFFF)
+    ext_tlv = <<0x11, 0x04::little-16, ext_mask::little-32>>
+    family = if ip_family == 4, do: 0x04, else: 0x06
+    family_tlv = <<0x19, 0x01::little-16, family>>
+    tlv_pdh =
+      case Keyword.get(opts, :packet_data_handle) do
+        nil -> <<>>
+        pdh when is_integer(pdh) and pdh >= 0 -> <<0x01, 0x04::little-16, pdh::little-32>>
+      end
+
+    tlvs = req_mask <> ext_tlv <> family_tlv <> tlv_pdh
+    size = byte_size(tlvs)
+
+    %{
+      service_id: 0x01,
+      payload: [<<@get_current_settings::little-16, size::little-16>>, tlvs],
+      decode: &parse_get_current_settings_resp/1
+    }
+  end
+
+  @doc false
+  @spec parse_get_current_settings_resp(binary()) :: {:ok, current_settings()} | {:error, atom()}
+  def parse_get_current_settings_resp(
+        <<@get_current_settings::little-16, size::little-16, tlvs::binary-size(size)>>
+      ) do
+    {:ok, do_parse_get_current_settings_tlvs(%{}, tlvs)}
+  end
+
+  def parse_get_current_settings_resp(_), do: {:error, :unexpected_response}
+
+  # Parse TLVs from Get Current Settings response
+  # According to public references, IPv4/IPv6 MTU are exposed as MTU fields.
+  # We support both possible TLV encodings commonly seen:
+  # - 2-byte (little-16) MTU value
+  # - 4-byte (little-32) MTU value
+  defp do_parse_get_current_settings_tlvs(parsed, <<>>), do: parsed
+
+  # IPv4 MTU (try 2-byte)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x25, 0x02::little-16, mtu::little-16, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:ipv4_mtu, mtu)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 MTU (try 4-byte)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x25, 0x04::little-16, mtu::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:ipv4_mtu, mtu)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv6 MTU (try 2-byte)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x24, 0x02::little-16, mtu::little-16, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:ipv6_mtu, mtu)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv6 MTU (try 4-byte)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x24, 0x04::little-16, mtu::little-32, rest::binary>>
+       ) do
+    parsed
+    |> Map.put(:ipv6_mtu, mtu)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # Generic MTU TLV seen on some modems (type 0x29). Treat as interface MTU and
+  # populate both families if not already set.
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x29, 0x04::little-16, mtu::little-32, rest::binary>>
+       ) do
+
+    parsed
+    |> put_if_absent(:ipv4_mtu, mtu)
+    |> put_if_absent(:ipv6_mtu, mtu)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # Skip other TLVs
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<type, len::little-16, value::binary-size(len), rest::binary>>
+       ) do
+    do_parse_get_current_settings_tlvs(parsed, rest)
+  end
+
+  defp put_if_absent(map, key, value) do
+    if Map.has_key?(map, key), do: map, else: Map.put(map, key, value)
+  end
 
   @typedoc """
   The type of measurement you are wanting to be reported
