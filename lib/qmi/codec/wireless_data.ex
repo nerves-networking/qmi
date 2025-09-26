@@ -447,6 +447,7 @@ defmodule QMI.Codec.WirelessData do
     ext_tlv = <<0x11, 0x04::little-16, ext_mask::little-32>>
     family = if ip_family == 4, do: 0x04, else: 0x06
     family_tlv = <<0x19, 0x01::little-16, family>>
+
     tlv_pdh =
       case Keyword.get(opts, :packet_data_handle) do
         nil -> <<>>
@@ -525,7 +526,7 @@ defmodule QMI.Codec.WirelessData do
   defp do_parse_get_current_settings_tlvs(
          parsed,
          <<0x29, 0x04::little-16, mtu::little-32, rest::binary>>
-      ) do
+       ) do
     parsed
     |> put_if_absent(:ipv4_mtu, mtu)
     |> put_if_absent(:ipv6_mtu, mtu)
