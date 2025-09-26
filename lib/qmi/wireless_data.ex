@@ -54,9 +54,9 @@ defmodule QMI.WirelessData do
   * `:extended_mask` - add Extended Requested Settings (0x11) mask
   * `:packet_data_handle` - include PDH (0x01) for the active session
   """
-  @spec get_current_settings(QMI.name(), Codec.WirelessData.ip_family(),
-          [Codec.WirelessData.get_current_settings_opt()]) ::
-          {:ok, Codec.WirelessData.current_settings()} | {:error, atom()}
+  @spec get_current_settings(QMI.name(), Codec.WirelessData.ip_family(), [
+          Codec.WirelessData.get_current_settings_opt()
+        ]) :: {:ok, Codec.WirelessData.current_settings()} | {:error, atom()}
   def get_current_settings(qmi, ip_family \\ 4, opts \\ []) do
     Codec.WirelessData.get_current_settings(ip_family, opts)
     |> QMI.call(qmi)

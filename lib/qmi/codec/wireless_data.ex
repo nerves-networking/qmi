@@ -525,8 +525,7 @@ defmodule QMI.Codec.WirelessData do
   defp do_parse_get_current_settings_tlvs(
          parsed,
          <<0x29, 0x04::little-16, mtu::little-32, rest::binary>>
-       ) do
-
+      ) do
     parsed
     |> put_if_absent(:ipv4_mtu, mtu)
     |> put_if_absent(:ipv6_mtu, mtu)
