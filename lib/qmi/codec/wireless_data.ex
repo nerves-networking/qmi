@@ -528,8 +528,8 @@ defmodule QMI.Codec.WirelessData do
          <<0x29, 0x04::little-16, mtu::little-32, rest::binary>>
        ) do
     parsed
-    |> put_if_absent(:ipv4_mtu, mtu)
-    |> put_if_absent(:ipv6_mtu, mtu)
+    |> Map.put(:ipv4_mtu, mtu)
+    |> Map.put(:ipv6_mtu, mtu)
     |> do_parse_get_current_settings_tlvs(rest)
   end
 
@@ -539,10 +539,6 @@ defmodule QMI.Codec.WirelessData do
          <<_type, len::little-16, _value::binary-size(len), rest::binary>>
        ) do
     do_parse_get_current_settings_tlvs(parsed, rest)
-  end
-
-  defp put_if_absent(map, key, value) do
-    if Map.has_key?(map, key), do: map, else: Map.put(map, key, value)
   end
 
   @typedoc """
