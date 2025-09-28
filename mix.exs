@@ -1,12 +1,13 @@
 defmodule QMI.MixProject do
   use Mix.Project
 
+  @app :qmi
   @version "0.10.1"
-  @source_url "https://github.com/nerves-networking/qmi"
+  @source_url "https://github.com/nerves-networking/#{@app}"
 
   def project do
     [
-      app: :qmi,
+      app: @app,
       version: @version,
       description: description(),
       package: package(),
@@ -101,8 +102,10 @@ defmodule QMI.MixProject do
       ],
       licenses: ["Apache-2.0"],
       links: %{
+        "Changelog" => "https://hexdocs.pm/#{@app}/changelog.html",
         "GitHub" => @source_url,
-        "REUSE Compliance" => "https://api.reuse.software/info/github.com/nerves-networking/qmi"
+        "REUSE Compliance" =>
+          "https://api.reuse.software/info/github.com/nerves-networking/#{@app}"
       }
     ]
   end
