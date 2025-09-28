@@ -8,6 +8,10 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.2] - 2025-09-28
+
+* Support Get Current Settings for getting the MTU. Thanks to @joserp93
+
 ## [v0.10.1] - 2025-06-09
 
 * Update licensing and copyright for REUSE compliance
