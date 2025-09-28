@@ -365,4 +365,62 @@ defmodule QMI.Codec.WirelessDataTest do
                bin
     end
   end
+
+  describe "get_current_settings parsing" do
+    test "parses IPv4 and IPv6 MTU TLVs" do
+      # IPv4 MTU (0x25) 2-byte value = 1500 (0x05DC)
+      # IPv6 MTU (0x24) 4-byte value = 1500 (0x000005DC)
+      tlvs =
+        <<0x25, 0x02::little-16, 0x05DC::little-16, 0x24, 0x04::little-16, 0x000005DC::little-32>>
+
+      size = byte_size(tlvs)
+      binary = <<0x002D::little-16, size::little-16, tlvs::binary>>
+
+      assert {:ok, %{ipv4_mtu: 1500, ipv6_mtu: 1500}} =
+               WirelessData.parse_get_current_settings_resp(binary)
+    end
+
+    test "parses generic MTU TLV (0x29) and populates both families when absent" do
+      # Generic MTU (0x29) 4-byte value = 1460 (0x000005B4)
+      tlvs = <<0x29, 0x04::little-16, 0x000005B4::little-32>>
+
+      size = byte_size(tlvs)
+      binary = <<0x002D::little-16, size::little-16, tlvs::binary>>
+
+      assert {:ok, %{ipv4_mtu: 1460, ipv6_mtu: 1460}} =
+               WirelessData.parse_get_current_settings_resp(binary)
+    end
+  end
+
+  describe "get_current_settings real-world and error cases" do
+    test "parses real-world TLVs from modem log (generic MTU 1400) and ignores unknowns" do
+      # TLVs captured from modem debug for GetCurrentSettings
+      hex =
+        "020400000000001101000015040008080808160400040408081d0100001e04006368880a1f020000012004006468880a210400f8ffffff220100002301000024010000290400780500002a0100002b0100042c0100002d02008088"
+
+      tlvs = Base.decode16!(hex, case: :mixed)
+      size = byte_size(tlvs)
+      binary = <<0x002D::little-16, size::little-16, tlvs::binary>>
+
+      assert {:ok, %{ipv4_mtu: 1400, ipv6_mtu: 1400}} =
+               WirelessData.parse_get_current_settings_resp(binary)
+    end
+
+    test "returns empty map when no MTU-related TLVs are present" do
+      # Include a couple of unrelated TLVs only
+      tlvs = <<0x02, 0x04::little-16, 0x00::little-32, 0x22, 0x01::little-16, 0x00>>
+      size = byte_size(tlvs)
+      binary = <<0x002D::little-16, size::little-16, tlvs::binary>>
+
+      assert {:ok, %{}} = WirelessData.parse_get_current_settings_resp(binary)
+    end
+
+    test "returns error for unexpected response header/body" do
+      # Wrong message id and zero size should not match the parser
+      assert {:error, :unexpected_response} =
+               WirelessData.parse_get_current_settings_resp(
+                 <<0xFFFF::little-16, 0x0000::little-16>>
+               )
+    end
+  end
 end
