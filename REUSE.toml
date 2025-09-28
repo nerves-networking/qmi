@@ -7,7 +7,6 @@ path = [
  ".formatter.exs",
  ".github/dependabot.yml",
  ".gitignore",
- "CHANGELOG.md",
  "NOTICE",
  "REUSE.toml",
  "mix.exs",
@@ -16,11 +15,3 @@ path = [
 precedence = "aggregate"
 SPDX-FileCopyrightText = "None"
 SPDX-License-Identifier = "CC0-1.0"
-
-[[annotations]]
-path = [
- "README.md"
-]
-precedence = "aggregate"
-SPDX-FileCopyrightText = "2021 Matt Ludwigs"
-SPDX-License-Identifier = "CC-BY-4.0"

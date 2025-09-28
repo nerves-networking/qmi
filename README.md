@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: CC-BY-4.0
+  SPDX-FileCopyrightText: 2021 Matt Ludwigs
+-->
+
 # QMI
 
 [![Hex version](https://img.shields.io/hexpm/v/qmi.svg "Hex version")](https://hex.pm/packages/qmi)
