@@ -36,7 +36,26 @@ defmodule QMI.WirelessData do
   end
 
   @doc """
-  Modify a profile's settings to be used when starting an interface connection
+  Modify a profile's settings to be used when starting an interface connection.
+
+  Available settings:
+  * `:apn` - the Access Point Name (e.g., "simbase")
+  * `:username` - username for authentication
+  * `:password` - password for authentication
+  * `:pdp_type` - :ipv4, :ipv6, :ipv4v6, or :ppp
+  * `:auth_method` - :none, :pap, :chap, or :pap_or_chap
+  * `:roaming_disallowed` - true/false for roaming restrictions
+  * `:profile_type` - :profile_type_3gpp, :profile_type_3gpp2, or :profile_type_epc
+
+  ## Examples
+
+      # Configure a profile for "simbase" APN
+      QMI.WirelessData.modify_profile_settings(client, 1, [
+        apn: "simbase",
+        pdp_type: :ipv4v6,
+        auth_method: :none
+      ])
+
   """
   @spec modify_profile_settings(QMI.name(), profile_index :: integer(), [
           Codec.WirelessData.profile_setting()
