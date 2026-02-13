@@ -81,11 +81,15 @@ defmodule QMI do
   Send a request over QMI and return the response
 
   NOTE: the QMI name parameter is second to facilitate piping
+
+  ## Options
+
+  * `:timeout` - override the default 5 second call timeout (in milliseconds)
   """
-  @spec call(request(), name()) :: any()
-  def call(request, qmi) do
+  @spec call(request(), name(), keyword()) :: any()
+  def call(request, qmi, opts \\ []) do
     with {:ok, client_id} <- QMI.ClientIDCache.get_client_id(qmi, request.service_id) do
-      QMI.Driver.call(qmi, client_id, request)
+      QMI.Driver.call(qmi, client_id, request, opts)
     end
   end
 end
