@@ -819,8 +819,20 @@ defmodule QMI.Codec.WirelessData do
   * `:roaming_disallowed` - if using roaming is allowed or not
   * `:profile_type` - the profile type - see `profile_type()` type docs for more
     information
+  * `:apn` - the Access Point Name string
+  * `:username` - the username for authentication
+  * `:password` - the password for authentication
+  * `:pdp_type` - the PDP (Packet Data Protocol) type
+  * `:auth_method` - the authentication method to use
   """
-  @type profile_setting() :: {:roaming_disallowed, boolean()} | {:profile_type, profile_type()}
+  @type profile_setting() ::
+          {:roaming_disallowed, boolean()}
+          | {:profile_type, profile_type()}
+          | {:apn, String.t()}
+          | {:username, String.t()}
+          | {:password, String.t()}
+          | {:pdp_type, pdp_type()}
+          | {:auth_method, auth_method()}
 
   @typedoc """
   Response from issuing a modify profile settings request
@@ -881,6 +893,64 @@ defmodule QMI.Codec.WirelessData do
     make_modify_profile_settings_tlvs(rest, encoded ++ [tlvs], size + byte_size(tlvs))
   end
 
+  # APN setting (TLV 0x10)
+  defp make_modify_profile_settings_tlvs(
+         [{:apn, apn} | rest],
+         encoded,
+         size
+       )
+       when is_binary(apn) do
+    apn_size = byte_size(apn)
+    tlv = <<0x10, apn_size::little-16, apn::binary>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # PDP type setting (TLV 0x11)
+  defp make_modify_profile_settings_tlvs(
+         [{:pdp_type, pdp_type} | rest],
+         encoded,
+         size
+       ) do
+    pdp_byte = encode_pdp_type(pdp_type)
+    tlv = <<0x11, 0x01::little-16, pdp_byte>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # Username setting (TLV 0x12)
+  defp make_modify_profile_settings_tlvs(
+         [{:username, username} | rest],
+         encoded,
+         size
+       )
+       when is_binary(username) do
+    username_size = byte_size(username)
+    tlv = <<0x12, username_size::little-16, username::binary>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # Password setting (TLV 0x13)
+  defp make_modify_profile_settings_tlvs(
+         [{:password, password} | rest],
+         encoded,
+         size
+       )
+       when is_binary(password) do
+    password_size = byte_size(password)
+    tlv = <<0x13, password_size::little-16, password::binary>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # Auth method setting (TLV 0x14)
+  defp make_modify_profile_settings_tlvs(
+         [{:auth_method, auth_method} | rest],
+         encoded,
+         size
+       ) do
+    auth_byte = encode_auth_method(auth_method)
+    tlv = <<0x14, 0x01::little-16, auth_byte>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
   defp make_modify_profile_settings_tlvs([_unknown | rest], encoded, size) do
     make_modify_profile_settings_tlvs(rest, encoded, size)
   end
@@ -888,6 +958,16 @@ defmodule QMI.Codec.WirelessData do
   defp encode_profile_type(:profile_type_3gpp), do: 0x00
   defp encode_profile_type(:profile_type_3gpp2), do: 0x01
   defp encode_profile_type(:profile_type_epc), do: 0x02
+
+  defp encode_pdp_type(:ipv4), do: 0x00
+  defp encode_pdp_type(:ppp), do: 0x01
+  defp encode_pdp_type(:ipv6), do: 0x02
+  defp encode_pdp_type(:ipv4v6), do: 0x03
+
+  defp encode_auth_method(:none), do: 0x00
+  defp encode_auth_method(:pap), do: 0x01
+  defp encode_auth_method(:chap), do: 0x02
+  defp encode_auth_method(:pap_or_chap), do: 0x03
 
   defp parse_modify_profile_settings_resp(
          <<@modify_profile_settings::little-16, size::little-16, values::binary-size(size)>>
