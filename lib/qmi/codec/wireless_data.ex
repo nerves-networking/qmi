@@ -44,12 +44,13 @@ defmodule QMI.Codec.WirelessData do
           :unspecified
           | :mobile_ip
           | :internal
-          | :call_manger_defined
+          | :call_manager_defined
           | :three_gpp_specification_defined
           | :ppp
           | :ehrpd
           | :ipv6
           | :handoff
+          | {:unknown, non_neg_integer()}
 
   @typedoc """
   Name of the technology
@@ -299,6 +300,7 @@ defmodule QMI.Codec.WirelessData do
   defp parse_call_end_reason_type(0x08), do: :ehrpd
   defp parse_call_end_reason_type(0x09), do: :ipv6
   defp parse_call_end_reason_type(0x0C), do: :handoff
+  defp parse_call_end_reason_type(other), do: {:unknown, other}
 
   @spec parse_event_report_indication(event_report_indication(), binary()) ::
           event_report_indication()
