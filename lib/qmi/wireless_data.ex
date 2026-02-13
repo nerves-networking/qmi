@@ -16,13 +16,22 @@ defmodule QMI.WirelessData do
   This will return once a packet data session is established and the interface
   can perform IP address configuration. That means once this returns you can
   configure the interface via DHCP.
+
+  ## Options
+
+  * `:apn` - the name of the APN
+  * `:profile_3gpp_index` - the 3GPP profile index to use
+  * `:timeout` - override the default QMI call timeout (in milliseconds).
+    Some modems take longer than 5s to establish a data session.
   """
   @spec start_network_interface(QMI.name(), [
-          Codec.WirelessData.start_network_interface_opt()
+          Codec.WirelessData.start_network_interface_opt() | {:timeout, non_neg_integer()}
         ]) :: {:ok, Codec.WirelessData.start_network_report()} | {:error, atom()}
   def start_network_interface(qmi, opts \\ []) do
-    Codec.WirelessData.start_network_interface(opts)
-    |> QMI.call(qmi)
+    {call_opts, request_opts} = Keyword.split(opts, [:timeout])
+
+    Codec.WirelessData.start_network_interface(request_opts)
+    |> QMI.call(qmi, call_opts)
   end
 
   @doc """
