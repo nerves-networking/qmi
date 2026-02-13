@@ -68,7 +68,13 @@ defmodule QMI do
     # This might not be true for all modems as some support 802.3 IP framing,
     # however, on the EC25 supports raw IP framing. This feature can be detected
     # and is probably a better solution that just forcing the raw IP framing.
-    File.write!("/sys/class/net/#{ifname}/qmi/raw_ip", "Y")
+    path = "/sys/class/net/#{ifname}/qmi/raw_ip"
+
+    if File.exists?(path) do
+      File.write!(path, "Y")
+    else
+      :ok
+    end
   end
 
   @doc """
