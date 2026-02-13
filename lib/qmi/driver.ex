@@ -196,9 +196,91 @@ defmodule QMI.Driver do
     {:noreply, %{state | transactions: transactions}}
   end
 
-  defp handle_report(%{transaction_id: transaction_id, code: :failure, error: error}, state) do
+  defp handle_report(
+         %{transaction_id: transaction_id, code: :failure, error: error, message: message} =
+           msg,
+         state
+       ) do
+    verbose_reason = parse_verbose_call_end_reason(message)
+
+    Logger.warning(
+      "[QMI.Driver] Request failed with error: #{inspect(error)}, " <>
+        "service: #{inspect(msg[:service_id])}, " <>
+        "verbose_reason: #{inspect(verbose_reason)}, " <>
+        "raw message: #{inspect(message, limit: :infinity)}"
+    )
+
     {:noreply, fail_transaction_id(state, transaction_id, error)}
   end
+
+  defp handle_report(%{transaction_id: transaction_id, code: :failure, error: error}, state) do
+    Logger.warning("[QMI.Driver] Request failed with error: #{inspect(error)}")
+    {:noreply, fail_transaction_id(state, transaction_id, error)}
+  end
+
+  # Parse verbose call end reason TLVs from a failed WDS response body.
+  # The message body starts with message_id (2 bytes) and message_size (2 bytes),
+  # followed by TLVs. TLV 0x10 = call end reason, TLV 0x11 = verbose call end reason.
+  defp parse_verbose_call_end_reason(
+         <<_message_id::little-16, _message_size::little-16, tlvs::binary>>
+       ) do
+    parse_failure_tlvs(tlvs, %{})
+  end
+
+  defp parse_verbose_call_end_reason(_), do: %{}
+
+  defp parse_failure_tlvs(<<>>, acc), do: acc
+
+  # TLV 0x02 - Result Code (skip, already handled)
+  defp parse_failure_tlvs(
+         <<0x02, 0x04::little-16, _code::little-16, _error::little-16, rest::binary>>,
+         acc
+       ) do
+    parse_failure_tlvs(rest, acc)
+  end
+
+  # TLV 0x10 - Call End Reason (simple)
+  defp parse_failure_tlvs(
+         <<0x10, 0x02::little-16, call_end_reason::little-16, rest::binary>>,
+         acc
+       ) do
+    parse_failure_tlvs(rest, Map.put(acc, :call_end_reason, call_end_reason))
+  end
+
+  # TLV 0x11 - Verbose Call End Reason (type + reason)
+  defp parse_failure_tlvs(
+         <<0x11, 0x04::little-16, reason_type::little-16, reason::little-16, rest::binary>>,
+         acc
+       ) do
+    acc =
+      acc
+      |> Map.put(:call_end_reason_type, parse_call_end_reason_type(reason_type))
+      |> Map.put(:verbose_call_end_reason, reason)
+
+    parse_failure_tlvs(rest, acc)
+  end
+
+  # Skip unknown TLVs
+  defp parse_failure_tlvs(
+         <<_type, length::little-16, _values::binary-size(length), rest::binary>>,
+         acc
+       ) do
+    parse_failure_tlvs(rest, acc)
+  end
+
+  # Bail on unparseable remainder
+  defp parse_failure_tlvs(_other, acc), do: acc
+
+  defp parse_call_end_reason_type(0x00), do: :unspecified
+  defp parse_call_end_reason_type(0x01), do: :mobile_ip
+  defp parse_call_end_reason_type(0x02), do: :internal
+  defp parse_call_end_reason_type(0x03), do: :call_manager_defined
+  defp parse_call_end_reason_type(0x06), do: :three_gpp_specification_defined
+  defp parse_call_end_reason_type(0x07), do: :ppp
+  defp parse_call_end_reason_type(0x08), do: :ehrpd
+  defp parse_call_end_reason_type(0x09), do: :ipv6
+  defp parse_call_end_reason_type(0x0C), do: :handoff
+  defp parse_call_end_reason_type(other), do: {:unknown, other}
 
   defp fail_transaction_id(state, transaction_id, error) do
     {{from, _request, timer}, transactions} = Map.pop(state.transactions, transaction_id)
