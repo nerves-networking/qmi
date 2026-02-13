@@ -48,11 +48,34 @@ defmodule QMI.WirelessData do
 
   @doc """
   Get current WDS settings for the given IP family (4 or 6).
-  Returns a map that may include `:ipv4_mtu` and/or `:ipv6_mtu`.
 
-  Options are passed to the codec builder and may include:
+  Returns comprehensive network configuration including IP addresses, DNS servers,
+  gateway, MTU, and domain information assigned by the modem during connection.
+
+  ## Returned Information
+
+  * **IPv4 Configuration**: `:ipv4_address`, `:ipv4_gateway`, `:ipv4_subnet_mask`,
+    `:ipv4_primary_dns`, `:ipv4_secondary_dns`, `:ipv4_mtu`
+  * **IPv6 Configuration**: `:ipv6_address`, `:ipv6_gateway`, `:ipv6_prefix_length`,
+    `:ipv6_primary_dns`, `:ipv6_secondary_dns`, `:ipv6_mtu`
+  * **Domain Information**: `:domain_name_list`, `:pcscf_domain_name_list`
+  * **PCSCF**: `:pcscf_address_using_pco`
+
+  ## Options
+
   * `:extended_mask` - add Extended Requested Settings (0x11) mask
   * `:packet_data_handle` - include PDH (0x01) for the active session
+
+  ## Examples
+
+      # Get IPv4 configuration
+      {:ok, settings} = QMI.WirelessData.get_current_settings(client, 4)
+      # Returns: %{ipv4_address: "192.168.1.100", ipv4_gateway: "192.168.1.1", ...}
+
+      # Get IPv6 configuration
+      {:ok, settings} = QMI.WirelessData.get_current_settings(client, 6)
+      # Returns: %{ipv6_address: "2001:db8::1", ipv6_gateway: "2001:db8::1", ...}
+
   """
   @spec get_current_settings(QMI.name(), Codec.WirelessData.ip_family(), [
           Codec.WirelessData.get_current_settings_opt()
