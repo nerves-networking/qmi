@@ -416,11 +416,29 @@ defmodule QMI.Codec.WirelessData do
           {:extended_mask, non_neg_integer()} | {:packet_data_handle, non_neg_integer()}
 
   @typedoc """
-  Subset of current settings we care about for MTU management
+  Complete current settings including network configuration
   """
   @type current_settings() :: %{
+          # MTU settings
           optional(:ipv4_mtu) => non_neg_integer(),
-          optional(:ipv6_mtu) => non_neg_integer()
+          optional(:ipv6_mtu) => non_neg_integer(),
+          # IPv4 configuration
+          optional(:ipv4_address) => String.t(),
+          optional(:ipv4_gateway) => String.t(),
+          optional(:ipv4_subnet_mask) => String.t(),
+          optional(:ipv4_primary_dns) => String.t(),
+          optional(:ipv4_secondary_dns) => String.t(),
+          # IPv6 configuration
+          optional(:ipv6_address) => String.t(),
+          optional(:ipv6_gateway) => String.t(),
+          optional(:ipv6_prefix_length) => non_neg_integer(),
+          optional(:ipv6_primary_dns) => String.t(),
+          optional(:ipv6_secondary_dns) => String.t(),
+          # Domain information
+          optional(:domain_name_list) => [String.t()],
+          # Connection info
+          optional(:pcscf_address_using_pco) => String.t(),
+          optional(:pcscf_domain_name_list) => [String.t()]
         }
 
   @doc """
@@ -474,6 +492,13 @@ defmodule QMI.Codec.WirelessData do
 
   def parse_get_current_settings_resp(_), do: {:error, :unexpected_response}
 
+  # QMI encodes IPv4 addresses as little-endian 32-bit integers.
+  # The 4 bytes on the wire are in little-endian order, so we reverse
+  # them to get the standard big-endian (network order) dotted-decimal.
+  defp format_ipv4(a, b, c, d) do
+    "#{d}.#{c}.#{b}.#{a}"
+  end
+
   # Parse TLVs from Get Current Settings response
   # According to public references, IPv4/IPv6 MTU are exposed as MTU fields.
   # We support both possible TLV encodings commonly seen:
@@ -501,6 +526,66 @@ defmodule QMI.Codec.WirelessData do
     |> do_parse_get_current_settings_tlvs(rest)
   end
 
+  # IPv4 Address (TLV 0x1E)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x1E, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    ipv4_addr = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_address, ipv4_addr)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 Gateway Address (TLV 0x20)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x20, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    gateway = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_gateway, gateway)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 Subnet Mask (TLV 0x21)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x21, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    subnet_mask = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_subnet_mask, subnet_mask)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 DNS Primary (TLV 0x15)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x15, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    dns = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_primary_dns, dns)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 DNS Secondary (TLV 0x16)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x16, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    dns = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_secondary_dns, dns)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
   # IPv6 MTU (try 2-byte)
   defp do_parse_get_current_settings_tlvs(
          parsed,
@@ -521,6 +606,55 @@ defmodule QMI.Codec.WirelessData do
     |> do_parse_get_current_settings_tlvs(rest)
   end
 
+  # IPv6 Address (TLV 0x1A) - 16 bytes + 1 byte prefix length
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x1A, 0x11::little-16, addr::binary-size(16), prefix_len, rest::binary>>
+       ) do
+    ipv6_addr = format_ipv6_address(addr)
+
+    parsed
+    |> Map.put(:ipv6_address, ipv6_addr)
+    |> Map.put(:ipv6_prefix_length, prefix_len)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv6 Gateway Address (TLV 0x1C) - 16 bytes + 1 byte prefix length
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x1C, 0x11::little-16, addr::binary-size(16), _prefix_len, rest::binary>>
+       ) do
+    gateway = format_ipv6_address(addr)
+
+    parsed
+    |> Map.put(:ipv6_gateway, gateway)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv6 DNS Primary (TLV 0x1E)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x1E, 0x10::little-16, addr::binary-size(16), rest::binary>>
+       ) do
+    dns = format_ipv6_address(addr)
+
+    parsed
+    |> Map.put(:ipv6_primary_dns, dns)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv6 DNS Secondary (TLV 0x20)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x20, 0x10::little-16, addr::binary-size(16), rest::binary>>
+       ) do
+    dns = format_ipv6_address(addr)
+
+    parsed
+    |> Map.put(:ipv6_secondary_dns, dns)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
   # Generic MTU TLV seen on some modems (type 0x29). Treat as interface MTU and
   # populate both families if not already set.
   defp do_parse_get_current_settings_tlvs(
@@ -533,12 +667,17 @@ defmodule QMI.Codec.WirelessData do
     |> do_parse_get_current_settings_tlvs(rest)
   end
 
-  # Skip other TLVs
+  # Skip unknown TLVs
   defp do_parse_get_current_settings_tlvs(
          parsed,
          <<_type, len::little-16, _value::binary-size(len), rest::binary>>
        ) do
     do_parse_get_current_settings_tlvs(parsed, rest)
+  end
+
+  # Helper function to format IPv6 addresses
+  defp format_ipv6_address(<<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>>) do
+    :inet.ntoa({a, b, c, d, e, f, g, h}) |> to_string()
   end
 
   @typedoc """
