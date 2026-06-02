@@ -6,7 +6,7 @@
 # QMI
 
 [![Hex version](https://img.shields.io/hexpm/v/qmi.svg "Hex version")](https://hex.pm/packages/qmi)
-[![API docs](https://img.shields.io/hexpm/v/qmi.svg?label=hexdocs "API docs")](https://hexdocs.pm/qmi/QMI.html)
+[![API docs](https://img.shields.io/hexpm/v/qmi.svg?label=hexdocs "API docs")](https://qmi.hexdocs.pm/QMI.html)
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/nerves-networking/qmi/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/nerves-networking/qmi/tree/main)
 [![REUSE status](https://api.reuse.software/badge/github.com/nerves-networking/qmi)](https://api.reuse.software/info/github.com/nerves-networking/qmi)
 
