@@ -13,7 +13,6 @@ defmodule QMI.DevBridge do
   # that makes Erlang refuse to open the files.
 
   use GenServer
-  require Logger
 
   @type options() :: [
           name: GenServer.name(),
