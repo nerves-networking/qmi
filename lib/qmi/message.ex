@@ -24,7 +24,7 @@ defmodule QMI.Message do
   @spec decode(binary()) :: {:ok, t()} | {:error, :bad_qmux_frame}
   def decode(<<0x01, _len::little-16, _flags, service, _client, bin::binary>>) do
     transaction_size = if service == 0x00, do: 8, else: 16
-    <<type, transaction::little-size(transaction_size), message_body::binary>> = bin
+    <<type, transaction::little-size(^transaction_size), message_body::binary>> = bin
 
     message =
       %{
