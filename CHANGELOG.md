@@ -8,6 +8,10 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.3] - 2026-06-05
+
+* Fix Elixir 1.20 warning
+
 ## [v0.10.2] - 2025-09-28
 
 * Support Get Current Settings for getting the MTU. Thanks to @joserp93
