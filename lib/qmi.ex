@@ -68,18 +68,28 @@ defmodule QMI do
     # This might not be true for all modems as some support 802.3 IP framing,
     # however, on the EC25 supports raw IP framing. This feature can be detected
     # and is probably a better solution that just forcing the raw IP framing.
-    File.write!("/sys/class/net/#{ifname}/qmi/raw_ip", "Y")
+    path = "/sys/class/net/#{ifname}/qmi/raw_ip"
+
+    if File.exists?(path) do
+      File.write!(path, "Y")
+    else
+      :ok
+    end
   end
 
   @doc """
   Send a request over QMI and return the response
 
   NOTE: the QMI name parameter is second to facilitate piping
+
+  ## Options
+
+  * `:timeout` - override the default 5 second call timeout (in milliseconds)
   """
-  @spec call(request(), name()) :: any()
-  def call(request, qmi) do
+  @spec call(request(), name(), keyword()) :: any()
+  def call(request, qmi, opts \\ []) do
     with {:ok, client_id} <- QMI.ClientIDCache.get_client_id(qmi, request.service_id) do
-      QMI.Driver.call(qmi, client_id, request)
+      QMI.Driver.call(qmi, client_id, request, opts)
     end
   end
 end

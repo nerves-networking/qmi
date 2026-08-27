@@ -15,6 +15,7 @@ defmodule QMI.Codec.WirelessData do
   @start_network_interface 0x0020
   @packet_service_status_ind 0x0022
   @modify_profile_settings 0x0028
+  @get_profile_settings 0x002B
   @get_current_settings 0x002D
 
   # When a stat is configured to be reported but no data has been recorded
@@ -43,12 +44,13 @@ defmodule QMI.Codec.WirelessData do
           :unspecified
           | :mobile_ip
           | :internal
-          | :call_manger_defined
+          | :call_manager_defined
           | :three_gpp_specification_defined
           | :ppp
           | :ehrpd
           | :ipv6
           | :handoff
+          | {:unknown, non_neg_integer()}
 
   @typedoc """
   Name of the technology
@@ -89,6 +91,27 @@ defmodule QMI.Codec.WirelessData do
           optional(:rx_errors) => integer(),
           optional(:tx_drops) => integer(),
           optional(:rx_drops) => integer()
+        }
+
+  @typedoc """
+  PDP (Packet Data Protocol) type for the profile
+  """
+  @type pdp_type :: :ipv4 | :ppp | :ipv6 | :ipv4v6 | :unknown
+
+  @typedoc """
+  Authentication method for the profile
+  """
+  @type auth_method :: :none | :pap | :chap | :pap_or_chap | :unknown
+
+  @typedoc """
+  Profile settings returned by get_profile_settings
+  """
+  @type profile_settings :: %{
+          optional(:apn) => String.t(),
+          optional(:pdp_type) => pdp_type(),
+          optional(:username) => String.t(),
+          optional(:password) => String.t(),
+          optional(:auth) => auth_method()
         }
 
   @doc """
@@ -277,6 +300,7 @@ defmodule QMI.Codec.WirelessData do
   defp parse_call_end_reason_type(0x08), do: :ehrpd
   defp parse_call_end_reason_type(0x09), do: :ipv6
   defp parse_call_end_reason_type(0x0C), do: :handoff
+  defp parse_call_end_reason_type(other), do: {:unknown, other}
 
   @spec parse_event_report_indication(event_report_indication(), binary()) ::
           event_report_indication()
@@ -416,11 +440,29 @@ defmodule QMI.Codec.WirelessData do
           {:extended_mask, non_neg_integer()} | {:packet_data_handle, non_neg_integer()}
 
   @typedoc """
-  Subset of current settings we care about for MTU management
+  Complete current settings including network configuration
   """
   @type current_settings() :: %{
+          # MTU settings
           optional(:ipv4_mtu) => non_neg_integer(),
-          optional(:ipv6_mtu) => non_neg_integer()
+          optional(:ipv6_mtu) => non_neg_integer(),
+          # IPv4 configuration
+          optional(:ipv4_address) => String.t(),
+          optional(:ipv4_gateway) => String.t(),
+          optional(:ipv4_subnet_mask) => String.t(),
+          optional(:ipv4_primary_dns) => String.t(),
+          optional(:ipv4_secondary_dns) => String.t(),
+          # IPv6 configuration
+          optional(:ipv6_address) => String.t(),
+          optional(:ipv6_gateway) => String.t(),
+          optional(:ipv6_prefix_length) => non_neg_integer(),
+          optional(:ipv6_primary_dns) => String.t(),
+          optional(:ipv6_secondary_dns) => String.t(),
+          # Domain information
+          optional(:domain_name_list) => [String.t()],
+          # Connection info
+          optional(:pcscf_address_using_pco) => String.t(),
+          optional(:pcscf_domain_name_list) => [String.t()]
         }
 
   @doc """
@@ -474,6 +516,13 @@ defmodule QMI.Codec.WirelessData do
 
   def parse_get_current_settings_resp(_), do: {:error, :unexpected_response}
 
+  # QMI encodes IPv4 addresses as little-endian 32-bit integers.
+  # The 4 bytes on the wire are in little-endian order, so we reverse
+  # them to get the standard big-endian (network order) dotted-decimal.
+  defp format_ipv4(a, b, c, d) do
+    "#{d}.#{c}.#{b}.#{a}"
+  end
+
   # Parse TLVs from Get Current Settings response
   # According to public references, IPv4/IPv6 MTU are exposed as MTU fields.
   # We support both possible TLV encodings commonly seen:
@@ -501,6 +550,66 @@ defmodule QMI.Codec.WirelessData do
     |> do_parse_get_current_settings_tlvs(rest)
   end
 
+  # IPv4 Address (TLV 0x1E)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x1E, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    ipv4_addr = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_address, ipv4_addr)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 Gateway Address (TLV 0x20)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x20, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    gateway = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_gateway, gateway)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 Subnet Mask (TLV 0x21)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x21, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    subnet_mask = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_subnet_mask, subnet_mask)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 DNS Primary (TLV 0x15)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x15, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    dns = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_primary_dns, dns)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv4 DNS Secondary (TLV 0x16)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x16, 0x04::little-16, a, b, c, d, rest::binary>>
+       ) do
+    dns = format_ipv4(a, b, c, d)
+
+    parsed
+    |> Map.put(:ipv4_secondary_dns, dns)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
   # IPv6 MTU (try 2-byte)
   defp do_parse_get_current_settings_tlvs(
          parsed,
@@ -521,6 +630,55 @@ defmodule QMI.Codec.WirelessData do
     |> do_parse_get_current_settings_tlvs(rest)
   end
 
+  # IPv6 Address (TLV 0x1A) - 16 bytes + 1 byte prefix length
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x1A, 0x11::little-16, addr::binary-size(16), prefix_len, rest::binary>>
+       ) do
+    ipv6_addr = format_ipv6_address(addr)
+
+    parsed
+    |> Map.put(:ipv6_address, ipv6_addr)
+    |> Map.put(:ipv6_prefix_length, prefix_len)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv6 Gateway Address (TLV 0x1C) - 16 bytes + 1 byte prefix length
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x1C, 0x11::little-16, addr::binary-size(16), _prefix_len, rest::binary>>
+       ) do
+    gateway = format_ipv6_address(addr)
+
+    parsed
+    |> Map.put(:ipv6_gateway, gateway)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv6 DNS Primary (TLV 0x1E)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x1E, 0x10::little-16, addr::binary-size(16), rest::binary>>
+       ) do
+    dns = format_ipv6_address(addr)
+
+    parsed
+    |> Map.put(:ipv6_primary_dns, dns)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
+  # IPv6 DNS Secondary (TLV 0x20)
+  defp do_parse_get_current_settings_tlvs(
+         parsed,
+         <<0x20, 0x10::little-16, addr::binary-size(16), rest::binary>>
+       ) do
+    dns = format_ipv6_address(addr)
+
+    parsed
+    |> Map.put(:ipv6_secondary_dns, dns)
+    |> do_parse_get_current_settings_tlvs(rest)
+  end
+
   # Generic MTU TLV seen on some modems (type 0x29). Treat as interface MTU and
   # populate both families if not already set.
   defp do_parse_get_current_settings_tlvs(
@@ -533,12 +691,17 @@ defmodule QMI.Codec.WirelessData do
     |> do_parse_get_current_settings_tlvs(rest)
   end
 
-  # Skip other TLVs
+  # Skip unknown TLVs
   defp do_parse_get_current_settings_tlvs(
          parsed,
          <<_type, len::little-16, _value::binary-size(len), rest::binary>>
        ) do
     do_parse_get_current_settings_tlvs(parsed, rest)
+  end
+
+  # Helper function to format IPv6 addresses
+  defp format_ipv6_address(<<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>>) do
+    :inet.ntoa({a, b, c, d, e, f, g, h}) |> to_string()
   end
 
   @typedoc """
@@ -658,8 +821,20 @@ defmodule QMI.Codec.WirelessData do
   * `:roaming_disallowed` - if using roaming is allowed or not
   * `:profile_type` - the profile type - see `profile_type()` type docs for more
     information
+  * `:apn` - the Access Point Name string
+  * `:username` - the username for authentication
+  * `:password` - the password for authentication
+  * `:pdp_type` - the PDP (Packet Data Protocol) type
+  * `:auth_method` - the authentication method to use
   """
-  @type profile_setting() :: {:roaming_disallowed, boolean()} | {:profile_type, profile_type()}
+  @type profile_setting() ::
+          {:roaming_disallowed, boolean()}
+          | {:profile_type, profile_type()}
+          | {:apn, String.t()}
+          | {:username, String.t()}
+          | {:password, String.t()}
+          | {:pdp_type, pdp_type()}
+          | {:auth_method, auth_method()}
 
   @typedoc """
   Response from issuing a modify profile settings request
@@ -720,6 +895,64 @@ defmodule QMI.Codec.WirelessData do
     make_modify_profile_settings_tlvs(rest, encoded ++ [tlvs], size + byte_size(tlvs))
   end
 
+  # APN setting (TLV 0x10)
+  defp make_modify_profile_settings_tlvs(
+         [{:apn, apn} | rest],
+         encoded,
+         size
+       )
+       when is_binary(apn) do
+    apn_size = byte_size(apn)
+    tlv = <<0x10, apn_size::little-16, apn::binary>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # PDP type setting (TLV 0x11)
+  defp make_modify_profile_settings_tlvs(
+         [{:pdp_type, pdp_type} | rest],
+         encoded,
+         size
+       ) do
+    pdp_byte = encode_pdp_type(pdp_type)
+    tlv = <<0x11, 0x01::little-16, pdp_byte>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # Username setting (TLV 0x12)
+  defp make_modify_profile_settings_tlvs(
+         [{:username, username} | rest],
+         encoded,
+         size
+       )
+       when is_binary(username) do
+    username_size = byte_size(username)
+    tlv = <<0x12, username_size::little-16, username::binary>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # Password setting (TLV 0x13)
+  defp make_modify_profile_settings_tlvs(
+         [{:password, password} | rest],
+         encoded,
+         size
+       )
+       when is_binary(password) do
+    password_size = byte_size(password)
+    tlv = <<0x13, password_size::little-16, password::binary>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # Auth method setting (TLV 0x14)
+  defp make_modify_profile_settings_tlvs(
+         [{:auth_method, auth_method} | rest],
+         encoded,
+         size
+       ) do
+    auth_byte = encode_auth_method(auth_method)
+    tlv = <<0x14, 0x01::little-16, auth_byte>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
   defp make_modify_profile_settings_tlvs([_unknown | rest], encoded, size) do
     make_modify_profile_settings_tlvs(rest, encoded, size)
   end
@@ -727,6 +960,16 @@ defmodule QMI.Codec.WirelessData do
   defp encode_profile_type(:profile_type_3gpp), do: 0x00
   defp encode_profile_type(:profile_type_3gpp2), do: 0x01
   defp encode_profile_type(:profile_type_epc), do: 0x02
+
+  defp encode_pdp_type(:ipv4), do: 0x00
+  defp encode_pdp_type(:ppp), do: 0x01
+  defp encode_pdp_type(:ipv6), do: 0x02
+  defp encode_pdp_type(:ipv4v6), do: 0x03
+
+  defp encode_auth_method(:none), do: 0x00
+  defp encode_auth_method(:pap), do: 0x01
+  defp encode_auth_method(:chap), do: 0x02
+  defp encode_auth_method(:pap_or_chap), do: 0x03
 
   defp parse_modify_profile_settings_resp(
          <<@modify_profile_settings::little-16, size::little-16, values::binary-size(size)>>
@@ -757,5 +1000,111 @@ defmodule QMI.Codec.WirelessData do
          parsed
        ) do
     parse_profile_settings_resp_tlvs(rest, parsed)
+  end
+
+  @doc """
+  Get settings for a specific profile.
+
+  ## Examples
+
+      iex> get_profile_settings(3, :profile_type_3gpp)
+      %{service_id: 1, payload: [...], decode: ...}
+
+  This builds a QMI request map that you can send with your
+  QMI transport (`QMI.call/2` or equivalent).
+  """
+  @spec get_profile_settings(integer(), profile_type()) :: QMI.request()
+  def get_profile_settings(index, type \\ :profile_type_3gpp) do
+    type_byte = encode_profile_type(type)
+    # TLV 0x01: profile info (type + index)
+    tlv = <<0x01, 0x02::little-16, type_byte, index>>
+    size = byte_size(tlv)
+
+    %{
+      service_id: 0x01,
+      payload: [
+        <<@get_profile_settings::little-16, size::little-16>>,
+        tlv
+      ],
+      decode: &parse_get_profile_settings_resp/1
+    }
+  end
+
+  # --- Profile settings parsing ---
+
+  defp parse_get_profile_settings_resp(
+         <<@get_profile_settings::little-16, size::little-16, values::binary-size(size)>>
+       ) do
+    {:ok, parse_profile_settings_tlvs(values, %{})}
+  end
+
+  defp parse_get_profile_settings_resp(_), do: {:error, :unexpected_response}
+
+  defp parse_profile_settings_tlvs(<<>>, parsed), do: parsed
+
+  # APN (0x10)
+  defp parse_profile_settings_tlvs(
+         <<0x10, len::little-16, apn::binary-size(len), rest::binary>>,
+         parsed
+       ) do
+    parse_profile_settings_tlvs(rest, Map.put(parsed, :apn, apn))
+  end
+
+  # PDP type (0x11)
+  defp parse_profile_settings_tlvs(
+         <<0x11, 0x01::little-16, pdp_type, rest::binary>>,
+         parsed
+       ) do
+    pdp =
+      case pdp_type do
+        0x00 -> :ipv4
+        0x01 -> :ppp
+        0x02 -> :ipv6
+        0x03 -> :ipv4v6
+        _ -> :unknown
+      end
+
+    parse_profile_settings_tlvs(rest, Map.put(parsed, :pdp_type, pdp))
+  end
+
+  # Username (0x12)
+  defp parse_profile_settings_tlvs(
+         <<0x12, len::little-16, user::binary-size(len), rest::binary>>,
+         parsed
+       ) do
+    parse_profile_settings_tlvs(rest, Map.put(parsed, :username, user))
+  end
+
+  # Password (0x13)
+  defp parse_profile_settings_tlvs(
+         <<0x13, len::little-16, pass::binary-size(len), rest::binary>>,
+         parsed
+       ) do
+    parse_profile_settings_tlvs(rest, Map.put(parsed, :password, pass))
+  end
+
+  # Auth (0x14)
+  defp parse_profile_settings_tlvs(
+         <<0x14, 0x01::little-16, auth, rest::binary>>,
+         parsed
+       ) do
+    method =
+      case auth do
+        0x00 -> :none
+        0x01 -> :pap
+        0x02 -> :chap
+        0x03 -> :pap_or_chap
+        _ -> :unknown
+      end
+
+    parse_profile_settings_tlvs(rest, Map.put(parsed, :auth, method))
+  end
+
+  # Skip unknown TLVs
+  defp parse_profile_settings_tlvs(
+         <<_t, len::little-16, _v::binary-size(len), rest::binary>>,
+         parsed
+       ) do
+    parse_profile_settings_tlvs(rest, parsed)
   end
 end
