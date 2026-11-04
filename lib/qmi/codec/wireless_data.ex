@@ -821,6 +821,7 @@ defmodule QMI.Codec.WirelessData do
   * `:roaming_disallowed` - if using roaming is allowed or not
   * `:profile_type` - the profile type - see `profile_type()` type docs for more
     information
+  * `:profile_name` - the name of the profile (a label, not the APN)
   * `:apn` - the Access Point Name string
   * `:username` - the username for authentication
   * `:password` - the password for authentication
@@ -830,6 +831,7 @@ defmodule QMI.Codec.WirelessData do
   @type profile_setting() ::
           {:roaming_disallowed, boolean()}
           | {:profile_type, profile_type()}
+          | {:profile_name, String.t()}
           | {:apn, String.t()}
           | {:username, String.t()}
           | {:password, String.t()}
@@ -895,7 +897,18 @@ defmodule QMI.Codec.WirelessData do
     make_modify_profile_settings_tlvs(rest, encoded ++ [tlvs], size + byte_size(tlvs))
   end
 
-  # APN setting (TLV 0x10)
+  # Profile name setting (TLV 0x10)
+  defp make_modify_profile_settings_tlvs(
+         [{:profile_name, name} | rest],
+         encoded,
+         size
+       )
+       when is_binary(name) do
+    tlv = <<0x10, byte_size(name)::little-16, name::binary>>
+    make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
+  end
+
+  # APN setting (TLV 0x14)
   defp make_modify_profile_settings_tlvs(
          [{:apn, apn} | rest],
          encoded,
@@ -903,7 +916,7 @@ defmodule QMI.Codec.WirelessData do
        )
        when is_binary(apn) do
     apn_size = byte_size(apn)
-    tlv = <<0x10, apn_size::little-16, apn::binary>>
+    tlv = <<0x14, apn_size::little-16, apn::binary>>
     make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
   end
 
@@ -918,7 +931,7 @@ defmodule QMI.Codec.WirelessData do
     make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
   end
 
-  # Username setting (TLV 0x12)
+  # Username setting (TLV 0x1B)
   defp make_modify_profile_settings_tlvs(
          [{:username, username} | rest],
          encoded,
@@ -926,11 +939,11 @@ defmodule QMI.Codec.WirelessData do
        )
        when is_binary(username) do
     username_size = byte_size(username)
-    tlv = <<0x12, username_size::little-16, username::binary>>
+    tlv = <<0x1B, username_size::little-16, username::binary>>
     make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
   end
 
-  # Password setting (TLV 0x13)
+  # Password setting (TLV 0x1C)
   defp make_modify_profile_settings_tlvs(
          [{:password, password} | rest],
          encoded,
@@ -938,18 +951,18 @@ defmodule QMI.Codec.WirelessData do
        )
        when is_binary(password) do
     password_size = byte_size(password)
-    tlv = <<0x13, password_size::little-16, password::binary>>
+    tlv = <<0x1C, password_size::little-16, password::binary>>
     make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
   end
 
-  # Auth method setting (TLV 0x14)
+  # Auth method setting (TLV 0x1D)
   defp make_modify_profile_settings_tlvs(
          [{:auth_method, auth_method} | rest],
          encoded,
          size
        ) do
     auth_byte = encode_auth_method(auth_method)
-    tlv = <<0x14, 0x01::little-16, auth_byte>>
+    tlv = <<0x1D, 0x01::little-16, auth_byte>>
     make_modify_profile_settings_tlvs(rest, encoded ++ [tlv], size + byte_size(tlv))
   end
 
@@ -1042,9 +1055,17 @@ defmodule QMI.Codec.WirelessData do
 
   defp parse_profile_settings_tlvs(<<>>, parsed), do: parsed
 
-  # APN (0x10)
+  # Profile name (0x10)
   defp parse_profile_settings_tlvs(
-         <<0x10, len::little-16, apn::binary-size(len), rest::binary>>,
+         <<0x10, len::little-16, name::binary-size(len), rest::binary>>,
+         parsed
+       ) do
+    parse_profile_settings_tlvs(rest, Map.put(parsed, :profile_name, name))
+  end
+
+  # APN (0x14)
+  defp parse_profile_settings_tlvs(
+         <<0x14, len::little-16, apn::binary-size(len), rest::binary>>,
          parsed
        ) do
     parse_profile_settings_tlvs(rest, Map.put(parsed, :apn, apn))
@@ -1067,25 +1088,25 @@ defmodule QMI.Codec.WirelessData do
     parse_profile_settings_tlvs(rest, Map.put(parsed, :pdp_type, pdp))
   end
 
-  # Username (0x12)
+  # Username (0x1B)
   defp parse_profile_settings_tlvs(
-         <<0x12, len::little-16, user::binary-size(len), rest::binary>>,
+         <<0x1B, len::little-16, user::binary-size(len), rest::binary>>,
          parsed
        ) do
     parse_profile_settings_tlvs(rest, Map.put(parsed, :username, user))
   end
 
-  # Password (0x13)
+  # Password (0x1C)
   defp parse_profile_settings_tlvs(
-         <<0x13, len::little-16, pass::binary-size(len), rest::binary>>,
+         <<0x1C, len::little-16, pass::binary-size(len), rest::binary>>,
          parsed
        ) do
     parse_profile_settings_tlvs(rest, Map.put(parsed, :password, pass))
   end
 
-  # Auth (0x14)
+  # Auth (0x1D)
   defp parse_profile_settings_tlvs(
-         <<0x14, 0x01::little-16, auth, rest::binary>>,
+         <<0x1D, 0x01::little-16, auth, rest::binary>>,
          parsed
        ) do
     method =
@@ -1097,7 +1118,7 @@ defmodule QMI.Codec.WirelessData do
         _ -> :unknown
       end
 
-    parse_profile_settings_tlvs(rest, Map.put(parsed, :auth, method))
+    parse_profile_settings_tlvs(rest, Map.put(parsed, :auth_method, method))
   end
 
   # Skip unknown TLVs

@@ -423,4 +423,47 @@ defmodule QMI.Codec.WirelessDataTest do
                )
     end
   end
+
+  describe "profile settings TLVs" do
+    test "modify encodes name, APN, credentials and auth with the spec TLV types" do
+      request =
+        WirelessData.modify_profile_settings(3,
+          profile_name: "data",
+          apn: "fixedip.m2m",
+          pdp_type: :ipv4,
+          username: "u",
+          password: "p",
+          auth_method: :chap
+        )
+
+      <<0x28::little-16, size::little-16, tlvs::binary>> =
+        :erlang.iolist_to_binary(request.payload)
+
+      assert size == byte_size(tlvs)
+
+      assert tlvs ==
+               <<0x01, 2::little-16, 0x00, 3, 0x10, 4::little-16, "data", 0x14, 11::little-16,
+                 "fixedip.m2m", 0x11, 1::little-16, 0x00, 0x1B, 1::little-16, "u", 0x1C,
+                 1::little-16, "p", 0x1D, 1::little-16, 0x02>>
+    end
+
+    test "get profile settings decodes the spec TLV types" do
+      tlvs =
+        <<0x02, 4::little-16, 0::32, 0x10, 14::little-16, "qdp_profile_ia", 0x11, 1::little-16,
+          0x00, 0x14, 11::little-16, "fixedip.m2m", 0x1B, 0::little-16, 0x1C, 0::little-16, 0x1D,
+          1::little-16, 0x00, 0x3E, 1::little-16, 0x00>>
+
+      request = WirelessData.get_profile_settings(3)
+
+      assert {:ok,
+              %{
+                profile_name: "qdp_profile_ia",
+                apn: "fixedip.m2m",
+                pdp_type: :ipv4,
+                username: "",
+                password: "",
+                auth_method: :none
+              }} == request.decode.(<<0x2B::little-16, byte_size(tlvs)::little-16, tlvs::binary>>)
+    end
+  end
 end
