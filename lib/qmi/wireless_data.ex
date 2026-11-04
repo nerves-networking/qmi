@@ -23,10 +23,17 @@ defmodule QMI.WirelessData do
   * `:profile_3gpp_index` - the 3GPP profile index to use
   * `:timeout` - override the default QMI call timeout (in milliseconds).
     Some modems take longer than 5s to establish a data session.
+
+  When the modem rejects the call, the error is `{:call_failed, reason}`,
+  where `reason` holds the call end reason TLVs (e.g. a 3GPP cause in
+  `:verbose_call_end_reason` when `:call_end_reason_type` is
+  `:three_gpp_specification_defined`).
   """
   @spec start_network_interface(QMI.name(), [
           Codec.WirelessData.start_network_interface_opt() | {:timeout, non_neg_integer()}
-        ]) :: {:ok, Codec.WirelessData.start_network_report()} | {:error, atom()}
+        ]) ::
+          {:ok, Codec.WirelessData.start_network_report()}
+          | {:error, atom() | {:call_failed, map()}}
   def start_network_interface(qmi, opts \\ []) do
     {call_opts, request_opts} = Keyword.split(opts, [:timeout])
 
