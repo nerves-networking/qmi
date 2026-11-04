@@ -1,6 +1,8 @@
 <!--
-  SPDX-License-Identifier: CC-BY-4.0
+  SPDX-FileCopyrightText: 2020 Jon Carstens
+  SPDX-FileCopyrightText: 2021 Frank Hunleth
   SPDX-FileCopyrightText: 2021 Matt Ludwigs
+  SPDX-License-Identifier: CC-BY-4.0
 -->
 
 # QMI

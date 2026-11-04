@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2021 Matt Ludwigs
 # SPDX-FileCopyrightText: 2023 Liv Cella
+# SPDX-FileCopyrightText: 2026 Marc Lainez
 #
 # SPDX-License-Identifier: Apache-2.0
 #

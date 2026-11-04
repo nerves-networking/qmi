@@ -1,5 +1,7 @@
 # SPDX-FileCopyrightText: 2021 Frank Hunleth
 # SPDX-FileCopyrightText: 2021 Matt Ludwigs
+# SPDX-FileCopyrightText: 2025 Jose Rodriguez
+# SPDX-FileCopyrightText: 2026 Marc Lainez
 #
 # SPDX-License-Identifier: Apache-2.0
 #
