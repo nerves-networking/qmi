@@ -213,11 +213,6 @@ defmodule QMI.Driver do
     {:noreply, fail_transaction_id(state, transaction_id, call_error(msg, error, verbose_reason))}
   end
 
-  defp handle_report(%{transaction_id: transaction_id, code: :failure, error: error}, state) do
-    Logger.warning("[QMI.Driver] Request failed with error: #{inspect(error)}")
-    {:noreply, fail_transaction_id(state, transaction_id, error)}
-  end
-
   # A failed WDS Start Network Interface carries why the call ended; the caller
   # needs it to tell, e.g., a rejected PDN from a missing APN. Other services
   # use TLV 0x10/0x11 for unrelated values, so only this response gets it.
