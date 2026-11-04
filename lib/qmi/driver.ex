@@ -210,13 +210,27 @@ defmodule QMI.Driver do
         "raw message: #{inspect(message, limit: :infinity)}"
     )
 
-    {:noreply, fail_transaction_id(state, transaction_id, error)}
+    {:noreply, fail_transaction_id(state, transaction_id, call_error(msg, error, verbose_reason))}
   end
 
   defp handle_report(%{transaction_id: transaction_id, code: :failure, error: error}, state) do
     Logger.warning("[QMI.Driver] Request failed with error: #{inspect(error)}")
     {:noreply, fail_transaction_id(state, transaction_id, error)}
   end
+
+  # A failed WDS Start Network Interface carries why the call ended; the caller
+  # needs it to tell, e.g., a rejected PDN from a missing APN. Other services
+  # use TLV 0x10/0x11 for unrelated values, so only this response gets it.
+  defp call_error(
+         %{service_id: 0x01, message: <<0x0020::little-16, _::binary>>},
+         error,
+         verbose_reason
+       )
+       when map_size(verbose_reason) > 0 do
+    {error, verbose_reason}
+  end
+
+  defp call_error(_msg, error, _verbose_reason), do: error
 
   # Parse verbose call end reason TLVs from a failed WDS response body.
   # The message body starts with message_id (2 bytes) and message_size (2 bytes),
