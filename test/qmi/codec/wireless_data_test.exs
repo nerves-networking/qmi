@@ -462,7 +462,8 @@ defmodule QMI.Codec.WirelessDataTest do
                 pdp_type: :ipv4,
                 username: "",
                 password: "",
-                auth_method: :none
+                auth_method: :none,
+                roaming_disallowed: false
               }} == request.decode.(<<0x2B::little-16, byte_size(tlvs)::little-16, tlvs::binary>>)
     end
   end
