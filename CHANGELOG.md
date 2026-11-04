@@ -8,6 +8,19 @@
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.4] - 2026-11-04
+
+* Add `QMI.WirelessDataAdmin` for getting and setting modem data formats
+* Add UIM card status and session provisioning support
+* Extend WDS current settings with IPv4/IPv6 addresses, gateways, DNS servers, and domain information
+* Add WDS profile listing, reading, and creation, including profile names and roaming restrictions
+* Extend profile settings modification with APN, authentication, and PDP type options
+* Add support for getting the default 3GPP profile and LTE attach PDN list
+* Add a `:timeout` option to `QMI.call/3` and `QMI.WirelessData.start_network_interface/2`
+* Return call end reasons when starting a network interface fails and improve failure logging
+* Fix crashes when parsing unknown call end reason types
+* Skip raw IP configuration when the interface's `qmi/raw_ip` sysfs file is absent
+
 ## [v0.10.3] - 2026-06-05
 
 * Fix Elixir 1.20 warning
