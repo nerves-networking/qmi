@@ -1130,6 +1130,14 @@ defmodule QMI.Codec.WirelessData do
     parse_profile_settings_tlvs(rest, Map.put(parsed, :auth_method, method))
   end
 
+  # Roaming disallowed flag (0x3E)
+  defp parse_profile_settings_tlvs(
+         <<0x3E, 0x01::little-16, disallowed, rest::binary>>,
+         parsed
+       ) do
+    parse_profile_settings_tlvs(rest, Map.put(parsed, :roaming_disallowed, disallowed != 0))
+  end
+
   # Skip unknown TLVs
   defp parse_profile_settings_tlvs(
          <<_t, len::little-16, _v::binary-size(len), rest::binary>>,
