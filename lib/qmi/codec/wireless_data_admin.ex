@@ -70,7 +70,7 @@ defmodule QMI.Codec.WirelessDataAdmin do
   Build a request to query the current data format.
   """
   @spec get_data_format() :: QMI.request()
-  def get_data_format do
+  def get_data_format() do
     %{
       service_id: @wda_service_id,
       payload: [<<@get_data_format::little-16, 0::little-16>>],
