@@ -466,4 +466,66 @@ defmodule QMI.Codec.WirelessDataTest do
               }} == request.decode.(<<0x2B::little-16, byte_size(tlvs)::little-16, tlvs::binary>>)
     end
   end
+
+  describe "creating a profile" do
+    test "encodes the profile type and settings" do
+      request = WirelessData.create_profile(apn: "fixedip.m2m", pdp_type: :ipv4)
+
+      <<0x27::little-16, size::little-16, tlvs::binary>> =
+        :erlang.iolist_to_binary(request.payload)
+
+      assert size == byte_size(tlvs)
+
+      assert tlvs ==
+               <<0x01, 1::little-16, 0x00, 0x14, 11::little-16, "fixedip.m2m", 0x11, 1::little-16,
+                 0x00>>
+    end
+
+    test "decodes the new profile index" do
+      request = WirelessData.create_profile(apn: "a")
+      tlvs = <<0x02, 4::little-16, 0::32, 0x01, 2::little-16, 0x00, 4>>
+
+      assert {:ok, %{index: 4}} ==
+               request.decode.(<<0x27::little-16, byte_size(tlvs)::little-16, tlvs::binary>>)
+    end
+  end
+
+  describe "default profile number" do
+    test "asks for the embedded 3GPP default and decodes the index" do
+      request = WirelessData.get_default_profile_number()
+
+      assert <<0x49::little-16, 5::little-16, 0x01, 2::little-16, 0x00, 0x00>> ==
+               :erlang.iolist_to_binary(request.payload)
+
+      tlvs = <<0x02, 4::little-16, 0::32, 0x01, 1::little-16, 1>>
+
+      assert {:ok, 1} ==
+               request.decode.(<<0x49::little-16, byte_size(tlvs)::little-16, tlvs::binary>>)
+    end
+  end
+
+  describe "LTE attach PDN list" do
+    test "decodes the current list" do
+      request = WirelessData.get_lte_attach_pdn_list()
+      tlvs = <<0x02, 4::little-16, 0::32, 0x10, 5::little-16, 2, 3::little-16, 7::little-16>>
+
+      assert {:ok, [3, 7]} ==
+               request.decode.(<<0x94::little-16, byte_size(tlvs)::little-16, tlvs::binary>>)
+    end
+
+    test "returns an empty list when the modem reports none" do
+      request = WirelessData.get_lte_attach_pdn_list()
+      tlvs = <<0x02, 4::little-16, 0::32>>
+
+      assert {:ok, []} ==
+               request.decode.(<<0x94::little-16, byte_size(tlvs)::little-16, tlvs::binary>>)
+    end
+  end
+
+  test "start network interface encodes the IP family" do
+    request = WirelessData.start_network_interface(profile_3gpp_index: 3, ip_family: 4)
+
+    assert <<0x20::little-16, 8::little-16, 0x31, 1::little-16, 3, 0x19, 1::little-16, 4>> ==
+             :erlang.iolist_to_binary(request.payload)
+  end
 end

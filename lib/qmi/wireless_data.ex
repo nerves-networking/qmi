@@ -21,6 +21,7 @@ defmodule QMI.WirelessData do
 
   * `:apn` - the name of the APN
   * `:profile_3gpp_index` - the 3GPP profile index to use
+  * `:ip_family` - `4` or `6`, the IP family to request
   * `:timeout` - override the default QMI call timeout (in milliseconds).
     Some modems take longer than 5s to establish a data session.
 
@@ -161,5 +162,32 @@ defmodule QMI.WirelessData do
   @spec get_profile_settings(QMI.name(), integer(), atom()) :: {:ok, map()} | {:error, term()}
   def get_profile_settings(qmi, index, profile_type \\ :profile_type_3gpp) do
     QMI.Codec.WirelessData.get_profile_settings(index, profile_type) |> QMI.call(qmi)
+  end
+
+  @doc """
+  Create a 3GPP profile and return its index
+  """
+  @spec create_profile(QMI.name(), [Codec.WirelessData.profile_setting()]) ::
+          {:ok, %{index: non_neg_integer()}} | {:error, term()}
+  def create_profile(qmi, settings) do
+    Codec.WirelessData.create_profile(settings) |> QMI.call(qmi)
+  end
+
+  @doc """
+  Get the modem's default 3GPP profile index
+  """
+  @spec get_default_profile_number(QMI.name()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def get_default_profile_number(qmi) do
+    Codec.WirelessData.get_default_profile_number() |> QMI.call(qmi)
+  end
+
+  @doc """
+  Get the profile indexes the modem uses for the LTE initial attach
+
+  An empty list means the modem has none configured.
+  """
+  @spec get_lte_attach_pdn_list(QMI.name()) :: {:ok, [non_neg_integer()]} | {:error, term()}
+  def get_lte_attach_pdn_list(qmi) do
+    Codec.WirelessData.get_lte_attach_pdn_list() |> QMI.call(qmi)
   end
 end

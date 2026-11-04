@@ -14,9 +14,12 @@ defmodule QMI.Codec.WirelessData do
   @event_report 0x0001
   @start_network_interface 0x0020
   @packet_service_status_ind 0x0022
+  @create_profile 0x0027
   @modify_profile_settings 0x0028
   @get_profile_settings 0x002B
   @get_current_settings 0x002D
+  @get_default_profile_number 0x0049
+  @get_lte_attach_pdn_list 0x0094
 
   # When a stat is configured to be reported but no data has been recorded
   # before the indication is sent, the value is `0xFFFFFFFF` which is treated as
@@ -30,7 +33,8 @@ defmodule QMI.Codec.WirelessData do
 
   * `:apn` - the name of our APN
   """
-  @type start_network_interface_opt() :: {:apn, String.t()} | {:profile_3gpp_index, integer()}
+  @type start_network_interface_opt() ::
+          {:apn, String.t()} | {:profile_3gpp_index, integer()} | {:ip_family, 4 | 6}
 
   @typedoc """
   Report from starting the network interface
@@ -138,6 +142,11 @@ defmodule QMI.Codec.WirelessData do
 
   defp make_tlvs([{:profile_3gpp_index, profile_index} | rest], tlvs, size) do
     tlv = <<0x31, 0x01::little-16, profile_index>>
+    make_tlvs(rest, [tlvs, tlv], size + byte_size(tlv))
+  end
+
+  defp make_tlvs([{:ip_family, family} | rest], tlvs, size) when family in [4, 6] do
+    tlv = <<0x19, 0x01::little-16, family>>
     make_tlvs(rest, [tlvs, tlv], size + byte_size(tlv))
   end
 
@@ -1128,4 +1137,103 @@ defmodule QMI.Codec.WirelessData do
        ) do
     parse_profile_settings_tlvs(rest, parsed)
   end
+
+  @doc """
+  Create a profile with the given settings
+
+  The modem picks the index, which the response returns. `:profile_type`
+  defaults to `:profile_type_3gpp`.
+  """
+  @spec create_profile([profile_setting()]) :: QMI.request()
+  def create_profile(settings) do
+    profile_type = settings[:profile_type] || :profile_type_3gpp
+    type_tlv = <<0x01, 0x01::little-16, encode_profile_type(profile_type)>>
+
+    {tlvs, tlvs_size} =
+      settings
+      |> Keyword.drop([:profile_type, :profile_info])
+      |> make_modify_profile_settings_tlvs([type_tlv], byte_size(type_tlv))
+
+    %{
+      service_id: 0x01,
+      payload: [<<@create_profile::little-16, tlvs_size::little-16>>, tlvs],
+      decode: &parse_create_profile_resp/1
+    }
+  end
+
+  defp parse_create_profile_resp(
+         <<@create_profile::little-16, size::little-16, tlvs::binary-size(size)>>
+       ) do
+    case find_tlv(tlvs, 0x01) do
+      <<_type, index>> -> {:ok, %{index: index}}
+      _ -> {:error, :unexpected_response}
+    end
+  end
+
+  defp parse_create_profile_resp(_), do: {:error, :unexpected_response}
+
+  @doc """
+  Get the modem's default profile index for a profile type
+
+  The default profile is the one the modem uses for data calls that do not
+  name a profile.
+  """
+  @spec get_default_profile_number(profile_type()) :: QMI.request()
+  def get_default_profile_number(profile_type \\ :profile_type_3gpp) do
+    # Profile family 0x00: embedded (the modem's own data calls)
+    tlv = <<0x01, 0x02::little-16, encode_profile_type(profile_type), 0x00>>
+
+    %{
+      service_id: 0x01,
+      payload: [<<@get_default_profile_number::little-16, byte_size(tlv)::little-16>>, tlv],
+      decode: &parse_get_default_profile_number_resp/1
+    }
+  end
+
+  defp parse_get_default_profile_number_resp(
+         <<@get_default_profile_number::little-16, size::little-16, tlvs::binary-size(size)>>
+       ) do
+    case find_tlv(tlvs, 0x01) do
+      <<index>> -> {:ok, index}
+      _ -> {:error, :unexpected_response}
+    end
+  end
+
+  defp parse_get_default_profile_number_resp(_), do: {:error, :unexpected_response}
+
+  @doc """
+  Get the profile indexes the modem uses for the LTE initial attach
+
+  On LTE the attach brings up the default bearer with the settings of the
+  first profile of this list.
+  """
+  @spec get_lte_attach_pdn_list() :: QMI.request()
+  def get_lte_attach_pdn_list() do
+    %{
+      service_id: 0x01,
+      payload: <<@get_lte_attach_pdn_list::little-16, 0x00::little-16>>,
+      decode: &parse_get_lte_attach_pdn_list_resp/1
+    }
+  end
+
+  defp parse_get_lte_attach_pdn_list_resp(
+         <<@get_lte_attach_pdn_list::little-16, size::little-16, tlvs::binary-size(size)>>
+       ) do
+    case find_tlv(tlvs, 0x10) do
+      <<count, indexes::binary-size(count * 2), _::binary>> ->
+        {:ok, for(<<index::little-16 <- indexes>>, do: index)}
+
+      _ ->
+        {:ok, []}
+    end
+  end
+
+  defp parse_get_lte_attach_pdn_list_resp(_), do: {:error, :unexpected_response}
+
+  defp find_tlv(<<type, len::little-16, value::binary-size(len), _::binary>>, type), do: value
+
+  defp find_tlv(<<_type, len::little-16, _value::binary-size(len), rest::binary>>, type),
+    do: find_tlv(rest, type)
+
+  defp find_tlv(_, _type), do: nil
 end
